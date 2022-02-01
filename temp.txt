@@ -1,0 +1,119 @@
+[32mSetting output log file to default (Log_fold.log).[0m
+[0m[4mfold:[0m
+[0mCollection name='TList', class='TList', size=8
+ --inputfile=~/Desktop/EBL_Gamma2016/EBL_samples/PKS1441+25_2015/data/nominal/flute/Output_flute.root[0m
+[0m --function=MBPWL[0m
+[0m --redshift=0.03[0m
+[0m --MBPWLn_breaks=3[0m
+[0m --Efirst=34.44039459793338[0m
+[0m --Elast=172.6108609356989[0m
+[0m --EBLscale=0.0.[0m
+[0m --logdFdE[0m
+[0mWarning: Requested picture 'marslogo.xpm' not found... ignored.
+    Please copy marslogo.xpm to $HOME or $HOME/icons or add
+      Unix.*.Gui.IconPath: ~/Path/To/The/Picture
+    to [$HOME/].rootrc.
+[32mReading tau values for Dominguez'11 model from file /home/rgrau/Mars_root6/mrcfiles/tau_dominguez11.out[0m
+[0m[32mOpened file ~/Desktop/EBL_Gamma2016/EBL_samples/PKS1441+25_2015/data/nominal/flute/Output_flute.root[0m
+[0m[33mWarning: Eest bins 8 to 9 have been excluded from the analysis due to poor MC statistics![0m
+[0m[32mEnergy normalization set at 90.0 GeV[0m
+[0m[32mFunction expression: log(dF/dE) = [p0]+[p1]*log(((x))/34.00)-(((x))>34.00)*[p2]*log(((x))/34.00)-((x)>76.47)*[p3]*log((x)/76.47)-(x>172.00)*[p4]*log(x/172.00)[0m
+[0m[32mMSpectralLikelihood::SetTau_vs_E : maximum energy for which EBL optical depth is provided: 30000 GeV.[0m
+[0m[32mAdding Tab 'EBL' (942x627, TCanvas=0x55c37788b680)[0m
+[0m[32mAdding Tab 'EBL2' (942x627, TCanvas=0x55c37c60af00)[0m
+[0m FCN=6.62586 FROM HESSE     STATUS=NOT POSDEF     41 CALLS         408 TOTAL
+                     EDM=1.2393e-08    STRATEGY= 1      ERR MATRIX NOT POS-DEF
+  EXT PARAMETER                APPROXIMATE        STEP         FIRST   
+  NO.   NAME      VALUE            ERROR          SIZE      DERIVATIVE 
+   1  p0          -1.65583e+01   2.68852e-01   1.26916e-05  -2.00022e-04
+   2  p1          -3.17683e+00   2.95305e-01   1.23545e-05  -1.23758e-04
+   3  p2           5.79467e-06   6.79316e+00   4.94963e-02   1.03217e-06
+   4  p3           1.69627e+00   5.24801e-01   9.67474e-06   4.86193e-04
+   5  p4           9.02150e-01   7.00227e-01   5.61808e-05  -4.13444e-04
+[32mInitial fit status: 0   ; Prob: 0.157031[0m
+[0m[32mChi2 before Likelihood maximization: 28.3021[0m
+[0m[32mAdding Tab 'OFF' (942x627, TCanvas=0x55c37bdafdb0)[0m
+[0m[32m[0m
+[0m[32mUsed energy range for the fit: 39.7164 to 5000 GeV[0m
+[0m[32m[0m
+[0mMinuit2Minimizer: Minimize with max-calls 10000 convergence for edm < 0.01 strategy 1
+Minuit2Minimizer : Valid minimum - status = 0
+FVAL  = 25.83232893702084
+Edm   = 1.98587795912570268e-05
+Nfcn  = 166
+p00	  = -16.4488	 +/-  0.182197
+p01	  = -3.26512	 +/-  0.80013	(limited)
+p02	  = 0.0157365	 +/-  8.79316	(limited)
+p03	  = 1.77288	 +/-  0.560838	(limited)
+p04	  = 4.72832e-07	 +/-  0.528928	(limited)
+******************************************************************************************************
+Minuit2Minimizer::GetMinosError - Run MINOS LOWER error for parameter #0 : p00 using max-calls 10000, tolerance 0.01
+******************************************************************************************************
+Minuit2Minimizer::GetMinosError - Run MINOS UPPER error for parameter #0 : p00 using max-calls 10000, tolerance 0.01
+Minos: Lower error for parameter p00  :  -0.187748
+Minos: Upper error for parameter p00  :  0.286672
+******************************************************************************************************
+Minuit2Minimizer::GetMinosError - Run MINOS LOWER error for parameter #1 : p01 using max-calls 10000, tolerance 0.01
+******************************************************************************************************
+Minuit2Minimizer::GetMinosError - Run MINOS UPPER error for parameter #1 : p01 using max-calls 10000, tolerance 0.01
+Minos: Lower error for parameter p01  :  -0.317859
+Minos:  Invalid upper error for parameter p01
+Minos:  New Minimum found while running Minos for upper error for parameter p01
+Minuit2Minimizer: Minimize with max-calls 10000 convergence for edm < 0.01 strategy 1
+Minuit2Minimizer : Invalid Minimum - status = 2
+FVAL  = 0
+Edm   = 0
+Nfcn  = 32
+[32mChi2 = 0[0m
+[0m[32mCorrelation (0,0) : 0[0m
+[0m[32mCorrelation (0,1) : 0[0m
+[0m[32mCorrelation (0,2) : 0[0m
+[0m[32mCorrelation (0,3) : 0[0m
+[0m[32mCorrelation (0,4) : 0[0m
+[0m[32mCorrelation (1,0) : 0[0m
+[0m[32mCorrelation (1,1) : 0[0m
+[0m[32mCorrelation (1,2) : 0[0m
+[0m[32mCorrelation (1,3) : 0[0m
+[0m[32mCorrelation (1,4) : 0[0m
+[0m[32mCorrelation (2,0) : 0[0m
+[0m[32mCorrelation (2,1) : 0[0m
+[0m[32mCorrelation (2,2) : 0[0m
+[0m[32mCorrelation (2,3) : 0[0m
+[0m[32mCorrelation (2,4) : 0[0m
+[0m[32mCorrelation (3,0) : 0[0m
+[0m[32mCorrelation (3,1) : 0[0m
+[0m[32mCorrelation (3,2) : 0[0m
+[0m[32mCorrelation (3,3) : 0[0m
+[0m[32mCorrelation (3,4) : 0[0m
+[0m[32mCorrelation (4,0) : 0[0m
+[0m[32mCorrelation (4,1) : 0[0m
+[0m[32mCorrelation (4,2) : 0[0m
+[0m[32mCorrelation (4,3) : 0[0m
+[0m[32mCorrelation (4,4) : 0[0m
+[0m[32m[0m
+[0m[32mGlobal correlation of parameter 0 = 0[0m
+[0m[32mGlobal correlation of parameter 1 = 0[0m
+[0m[32mGlobal correlation of parameter 2 = 0[0m
+[0m[32mGlobal correlation of parameter 3 = 0[0m
+[0m[32mGlobal correlation of parameter 4 = 0[0m
+[0m[32m[0m
+[0m[32mFunction expression: log(dF/dE) = [p0]+[p1]*log(((x))/34.00)-(((x))>34.00)*[p2]*log(((x))/34.00)-((x)>76.47)*[p3]*log((x)/76.47)-(x>172.00)*[p4]*log(x/172.00)[0m
+[0m[32mIntrinsic spectral parameters:    -3.03166e+06, -4.46532, 4.8763, 0.729616, 6.02333[0m
+[0m[32mIntr. spec. param. uncertainties (default ones from Migrad): 0, 0, 0, 0, 0[0m
+[0m[32m[0m
+[0m[32mIntrinsic spec. parameters (with MINOS uncertainties): [0m
+[0m[32mparameter #0= -3.03166e+06   +0.286672   -0.187748[0m
+[0m[32mparameter #1= -4.46532   +0.80013   -0.317859[0m
+[0m[32mparameter #2= 4.8763   +0   0[0m
+[0m[32mparameter #3= 0.729616   +0   0[0m
+[0m[32mparameter #4= 6.02333   +0   0[0m
+[0m[32m[0m
+[0m[32mFinal Chi2: 0 / 16[0m
+[0m[32mProb = 1[0m
+[0m[32mBins used in fit: from 10 to 30[0m
+[0m[32mAdding Tab 'ON' (942x627, TCanvas=0x55c37bd4ffb0)[0m
+[0m[32mAdding Tab 'Expected gammas' (942x627, TCanvas=0x55c37bd219c0)[0m
+[0m[32mAdding Tab 'Residuals' (942x627, TCanvas=0x55c37be796c0)[0m
+[0m[32mAdding Tab 'Residuals2' (942x627, TCanvas=0x55c3776435b0)[0m
+[0m[32mAdding Tab 'dF/dE' (942x627, TCanvas=0x55c37742c8b0)[0m
+[0m

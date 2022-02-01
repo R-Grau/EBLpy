@@ -1,0 +1,75 @@
+fold:
+--inputfile=~/Desktop/EBL_Gamma2016/EBL_samples/PKS1441+25_2015/data/nominal/flute/Output_flute.root
+--function=MBPWL
+--redshift=0.03
+--MBPWLn_breaks=3
+--Efirst=34.44039459793338
+--Elast=172.6108609356989
+--EBLscale=0.0.
+--logdFdE
+Reading tau values for Dominguez'11 model from file /home/rgrau/Mars_root6/mrcfiles/tau_dominguez11.out
+Opened file ~/Desktop/EBL_Gamma2016/EBL_samples/PKS1441+25_2015/data/nominal/flute/Output_flute.root
+Warning: Eest bins 8 to 9 have been excluded from the analysis due to poor MC statistics!
+Energy normalization set at 90.0 GeV
+Function expression: log(dF/dE) = [p0]+[p1]*log(((x))/34.00)-(((x))>34.00)*[p2]*log(((x))/34.00)-((x)>76.47)*[p3]*log((x)/76.47)-(x>172.00)*[p4]*log(x/172.00)
+MSpectralLikelihood::SetTau_vs_E : maximum energy for which EBL optical depth is provided: 30000 GeV.
+Adding Tab 'EBL' (942x627, TCanvas=0x55c37788b680)
+Adding Tab 'EBL2' (942x627, TCanvas=0x55c37c60af00)
+Initial fit status: 0   ; Prob: 0.157031
+Chi2 before Likelihood maximization: 28.3021
+Adding Tab 'OFF' (942x627, TCanvas=0x55c37bdafdb0)
+
+Used energy range for the fit: 39.7164 to 5000 GeV
+
+Chi2 = 0
+Correlation (0,0) : 0
+Correlation (0,1) : 0
+Correlation (0,2) : 0
+Correlation (0,3) : 0
+Correlation (0,4) : 0
+Correlation (1,0) : 0
+Correlation (1,1) : 0
+Correlation (1,2) : 0
+Correlation (1,3) : 0
+Correlation (1,4) : 0
+Correlation (2,0) : 0
+Correlation (2,1) : 0
+Correlation (2,2) : 0
+Correlation (2,3) : 0
+Correlation (2,4) : 0
+Correlation (3,0) : 0
+Correlation (3,1) : 0
+Correlation (3,2) : 0
+Correlation (3,3) : 0
+Correlation (3,4) : 0
+Correlation (4,0) : 0
+Correlation (4,1) : 0
+Correlation (4,2) : 0
+Correlation (4,3) : 0
+Correlation (4,4) : 0
+
+Global correlation of parameter 0 = 0
+Global correlation of parameter 1 = 0
+Global correlation of parameter 2 = 0
+Global correlation of parameter 3 = 0
+Global correlation of parameter 4 = 0
+
+Function expression: log(dF/dE) = [p0]+[p1]*log(((x))/34.00)-(((x))>34.00)*[p2]*log(((x))/34.00)-((x)>76.47)*[p3]*log((x)/76.47)-(x>172.00)*[p4]*log(x/172.00)
+Intrinsic spectral parameters:    -3.03166e+06, -4.46532, 4.8763, 0.729616, 6.02333
+Intr. spec. param. uncertainties (default ones from Migrad): 0, 0, 0, 0, 0
+
+Intrinsic spec. parameters (with MINOS uncertainties): 
+parameter #0= -3.03166e+06   +0.286672   -0.187748
+parameter #1= -4.46532   +0.80013   -0.317859
+parameter #2= 4.8763   +0   0
+parameter #3= 0.729616   +0   0
+parameter #4= 6.02333   +0   0
+
+Final Chi2: 0 / 16
+Prob = 1
+Bins used in fit: from 10 to 30
+Adding Tab 'ON' (942x627, TCanvas=0x55c37bd4ffb0)
+Adding Tab 'Expected gammas' (942x627, TCanvas=0x55c37bd219c0)
+Adding Tab 'Residuals' (942x627, TCanvas=0x55c37be796c0)
+Adding Tab 'Residuals2' (942x627, TCanvas=0x55c3776435b0)
+Adding Tab 'dF/dE' (942x627, TCanvas=0x55c37742c8b0)
