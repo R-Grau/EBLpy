@@ -1,4 +1,4 @@
-# EBL-splines
+# EBL_fit_MC
 Fits to a simulated absorved blazar spectrum in order to validate an EBL models.
 
 The usefull code is in "EBL_fit_MC.ipynb". There are other files related to fold or fitebl.
