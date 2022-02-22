@@ -151,3 +151,23 @@ def SED_alpha(alpha, dNdE_b, dNdE_b_u, tau, E_final):
     SED = np.square(E_final) * dNdE2
     SED_u = np.square(E_final) * dNdE2_u
     return SED, SED_u
+
+def sigma_intervals(sigma, chis_new, step, interpx):
+    sigma_inter = np.where(chis_new <= sigma**2 + np.min(chis_new))
+    upper_bound = step/5 * np.max(sigma_inter)
+    lower_bound = step/5 * np.min(sigma_inter)
+    if sigma == 1:
+        print("The minimum is at alpha = ", interpx[np.argmin(chis_new)], " + ", upper_bound-interpx[np.argmin(chis_new)], " - ", interpx[np.argmin(chis_new)] - lower_bound)
+    else:
+           print("The {sigma} sigma interval is at alpha = ".format(sigma = sigma), interpx[np.argmin(chis_new)], " + ", upper_bound-interpx[np.argmin(chis_new)], " - ", interpx[np.argmin(chis_new)] - lower_bound)
+ 
+def ordering_sigma(alphas, first_bin, last_bin, step, chisqs):
+    order = np.argsort(alphas)
+    interpx = np.arange(first_bin, last_bin, step/5)
+    alphas_reord = np.take_along_axis(alphas, order, axis=0)
+    chisqs_reord = np.take_along_axis(np.array(chisqs), order, axis=0)
+    f1 = interpolate.interp1d(alphas_reord, chisqs_reord, kind='linear')
+    chis_new = f1(interpx)
+    sigma_intervals(1, chis_new, step, interpx)
+    sigma_intervals(2, chis_new, step, interpx)
+    sigma_intervals(3, chis_new, step, interpx)
