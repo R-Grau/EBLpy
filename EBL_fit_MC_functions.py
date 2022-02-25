@@ -69,14 +69,14 @@ def SED_gen(rng_num, bckgmu, mu_vec, Effa, Ebinsw, Observation_time, E):
     SED_u = np.square(E) * dNdE_b_u
     return SED, SED_u, dNdE_b, dNdE_b_u
 
-def fit_func_select(fit_func_name, knots):
+def fit_func_select(fit_func_name, knots = 3, Efirst = 0.2 , Elast = 1.12):
     if fit_func_name == "MBPWL":
         def fit_func(xdata, params):
             if knots < 2 or knots > 30: #change this when adding more number of knots
                 raise Exception('knots have to be larger or equal than 3 and smaller than 30')
             else:
                 polw = np.zeros(len(xdata))
-                Ebr = np.geomspace(xdata[0], xdata[-1], knots+2)[1:-1]
+                Ebr = np.geomspace(Efirst, Elast, knots)
                 gamma = np.zeros(knots+1)
                 phi = np.zeros(knots+1)
                 phi_0 = params[0] #len(sqrtdelta_lam) = len(lam)-1 = len(phi)-1
