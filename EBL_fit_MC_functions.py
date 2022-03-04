@@ -54,13 +54,13 @@ def SED_gen(rng_num, bckgmu, mu_vec, Effa, Ebinsw, Observation_time, E):
     Simbckg5_u = np.sqrt(Simbckg5)
 
     N = my_generator.poisson(mu_vec)
-    # for i in range(len(N)):
-    #     if N[i] == 0:
-    #         N[i] = mu[i]
+    # N[N==0] = 1
     N_u = np.sqrt(N)
 
     NpB = N + Simbckg1 - Simbckg5
-    NpB_u = np.sqrt(N_u**2 + Simbckg1_u**2 - Simbckg5_u**2)
+    NpB_u = np.sqrt(N_u**2 + Simbckg1_u**2 + Simbckg5_u**2)
+    NpB_u[NpB_u == 0] = 1
+
 
     dNdE_b = NpB / Effa / Ebinsw / Observation_time
     dNdE_b_u = NpB_u / Effa / Ebinsw / Observation_time
@@ -171,3 +171,28 @@ def ordering_sigma(alphas, first_bin, last_bin, step, chisqs):
     sigma_intervals(1, chis_new, step, interpx)
     sigma_intervals(2, chis_new, step, interpx)
     sigma_intervals(3, chis_new, step, interpx)
+
+def on_off_rnd(rng_num, bckgmu, mu_vec):
+    my_generator = np.random.default_rng(rng_num)
+    Simbckg1 = my_generator.poisson(bckgmu)
+    Simbckg5 = my_generator.poisson(5*bckgmu)/5
+    N = my_generator.poisson(mu_vec)
+    # N[N==0] = 1
+
+    ON = N + Simbckg1
+    OFF = Simbckg5
+
+    return ON, OFF
+
+def SED_gen_nobckg(rng_num, mu_vec, Effa, Ebinsw, Observation_time, E):
+    my_generator = np.random.default_rng(rng_num)
+    NpB = my_generator.poisson(mu_vec)
+    NpB_u = np.sqrt(NpB)
+    NpB_u[NpB_u == 0] = 1
+
+    dNdE_b = NpB / Effa / Ebinsw / Observation_time
+    dNdE_b_u = NpB_u / Effa / Ebinsw / Observation_time
+
+    SED = np.square(E) * dNdE_b
+    SED_u = np.square(E) * dNdE_b_u
+    return SED, SED_u, dNdE_b, dNdE_b_u
