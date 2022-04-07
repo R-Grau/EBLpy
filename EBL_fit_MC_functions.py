@@ -1,13 +1,7 @@
 import numpy as np
-import scipy as sc
-import matplotlib.pyplot as plt
-import scipy.optimize as optimize
-from iminuit import Minuit
-import pandas as pd
 import scipy.interpolate as interpolate
 from scipy.integrate import quad
-from matplotlib import colors
-import scipy.stats as st
+from scipy.stats import poisson
 
 def chisq(obs, exp, error):
     return np.sum(np.square(obs - exp) / np.square(error))
@@ -103,7 +97,7 @@ def fit_func_select(fit_func_name, knots = 3, Efirst = 0.2 , Elast = 1.12):
         def fit_func(xdata, params):
             phi = params[0]
             gamma = params [1]
-            PLW = phi * xdata ** (-gamma)
+            PLW = phi / ((xdata/0.25) ** gamma)
             return PLW
         return(fit_func)
 
@@ -196,3 +190,59 @@ def SED_gen_nobckg(rng_num, mu_vec, Effa, Ebinsw, Observation_time, E):
     SED = np.square(E) * dNdE_b
     SED_u = np.square(E) * dNdE_b_u
     return SED, SED_u, dNdE_b, dNdE_b_u
+
+def mu_BG(mu_g, Non, Noff):
+    mubg = ((-6 * mu_g) + Non + Noff + np.sqrt(np.square((6 * mu_g) - Non - Noff) + (24 * Noff * mu_g)))/12
+    return mubg
+
+# def N_rnd(rng_num, mu):
+#     my_generator = np.random.default_rng(rng_num)
+#     N = my_generator.poisson(mu)
+#     return N
+
+def FF_Likelihood(Non, Noff, mu_gamma, mu_bg):
+    mu_on = mu_gamma + mu_bg
+    mu_off = mu_bg * 5
+    L = np.sum(poisson.pmf(k = Non, mu = mu_on) * poisson.pmf(k = Noff, mu = mu_off))
+    return L
+
+def dNdE_to_mu(dNdEa, Effa_reb, Ebinsw, Observation_time, Ebins, Eres_reb2, E_EBL):
+    mu_vec = dNdEa * Effa_reb * Ebinsw * Observation_time
+
+    mu_vec_reco = np.zeros(len(mu_vec))
+    mu_vec_i = np.zeros(len(mu_vec))
+
+    for i in range(len(mu_vec)):
+        for j in range(len(mu_vec)):
+            A = mu_vec[i]
+            Em = Ebins[j]
+            Ep = Ebins[j+1]
+            sigma = Eres_reb2[i]
+            mu = E_EBL[i]
+
+            mu_vec_i[j] = Gauss_int(A, mu, sigma, Em, Ep)[0]
+        mu_vec_reco = mu_vec_reco + mu_vec_i
+     
+    return mu_vec_reco
+
+def Poisson_logL(Non, Noff, mu_gam, mu_bg):
+    logL = np.log(poisson.pmf(Non, mu_gam + mu_bg) * poisson.pmf(Noff, 5 * mu_bg))
+    logLmax = np.log(poisson.pmf(Non, Non) * poisson.pmf(Noff, Noff))
+    return -2 * (logL - logLmax)
+
+def Poisson_logL_Non0(Non, Noff, mu_gam):
+    mu_bg = Noff / 6.
+    return Poisson_logL(Non, Noff, mu_gam, mu_bg)
+
+def Poisson_logL_Noff0(Non, Noff, mu_gam):
+    fAlpha = 1/5
+    mu_bg = fAlpha * Non / (1 + fAlpha) - mu_gam
+    for i in range(len(mu_bg)):
+        if mu_bg[i] < 0.:
+            mu_bg[i] = 0
+    return Poisson_logL(Non, Noff, mu_gam, mu_bg)
+
+def Gauss_logL(Non, Noff, mu_gam):
+    diff = Non - Noff/5 - mu_gam
+    delta_diff = np.sqrt(Non + Noff/5)
+    return np.square(diff)/np.square(delta_diff)
