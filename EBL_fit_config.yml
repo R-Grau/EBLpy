@@ -1,0 +1,26 @@
+Background: true
+Background_scale: 1.0
+EBL_Model: Dominguez
+Efirst: 0.2
+Elast: 1.1
+Energy_migration: true
+Forward_folding: true
+Norm: 0.25
+Observation_time: 42480
+Ph_index: 2.03
+Source_flux: 8.7e-06
+Spectrum_func_name: PWL
+Telescope: CTAN_alpha
+first_bin: 0.0
+fit_func_name: MBPWL
+initial_guess_0:
+- 5.0e-06
+- 2.0
+- 0.0
+- 0.0
+- 0.0
+initial_guess_pos: 2.0
+knots: 3
+last_bin: 2.0
+niter: 5
+step: 0.05
