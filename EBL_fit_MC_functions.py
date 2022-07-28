@@ -225,7 +225,16 @@ def dNdE_to_mu(dNdEa, Effa_reb, Ebinsw, Observation_time, Ebins, Eres_reb2, E_EB
      
     return mu_vec_reco
 
+def dNdE_to_mu_MAGIC(dNdEa, Ebinw, migmatval, Eest):
+    mu_vec = dNdEa * Ebinw
+    mu_vec_reco = np.zeros(len(Eest))
+    for i in range(len(Eest)):
+        mu_vec_reco[i] = np.sum(mu_vec * migmatval[:,i])
+    return mu_vec_reco
+
+
 def Poisson_logL(Non, Noff, mu_gam, mu_bg):
+    # print(Non, Noff, mu_gam, mu_bg)
     logL = np.log(poisson.pmf(Non, mu_gam + mu_bg) * poisson.pmf(Noff, 5 * mu_bg))
     logLmax = np.log(poisson.pmf(Non, Non) * poisson.pmf(Noff, Noff))
     return -2 * (logL - logLmax)

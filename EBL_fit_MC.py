@@ -16,7 +16,7 @@ import time
 
 #load all config:
 start_time = time.time()
-with open("EBL_fit_config.yml", "r") as f:
+with open("/data/magic/users-ifae/rgrau/EBL-splines/EBL_fit_config.yml", "r") as f:
     inp_config = yaml.safe_load(f)
 fit_func_name = inp_config["fit_func_name"]
 Telescope = inp_config["Telescope"]
@@ -86,7 +86,7 @@ else:
         return m
 
 if EBL_Model == "Dominguez":
-    file = np.loadtxt('tau_dominguez11.out')
+    file = np.loadtxt('/data/magic/users-ifae/rgrau/EBL-splines/tau_dominguez11.out')
     pdfile = pd.DataFrame(file)
     pdfile = pdfile.rename(columns={ 0 : 'E [TeV]', 1: 'tau z=0.01', 2: 'tau z=0.02526316', 3: 'tau z=0.04052632', 4: 'tau z=0.05578947', 5: 'tau z=0.07105263', 6: 'tau z=0.08631579', 7: 'tau z=0.10157895', 8: 'tau z=0.11684211', 9: 'tau z=0.13210526', 10: 'tau z=0.14736842', 11: 'tau z=0.16263158', 12: 'tau z=0.17789474', 13: 'tau z=0.19315789', 14: 'tau z=0.20842105'})
     E_EBL = pdfile['E [TeV]'].to_numpy()
@@ -109,7 +109,7 @@ else:
 if Telescope == "CTAN_alpha":
     
     #Effective area:
-    fileEA = np.loadtxt('EffArea50h.txt', skiprows = 11)
+    fileEA = np.loadtxt('/data/magic/users-ifae/rgrau/EBL-splines/EffArea50h.txt', skiprows = 11)
     EffA = pd.DataFrame(fileEA)
     EffA = EffA.rename(columns={ 0 : 'E [TeV]', 1: 'Eff area (m^2)'})
     EffaE= EffA['E [TeV]'].to_numpy()
@@ -119,7 +119,7 @@ if Telescope == "CTAN_alpha":
 
 
     #Anglular resolution:
-    fileAng = np.loadtxt('Angres.txt', skiprows = 11)
+    fileAng = np.loadtxt('/data/magic/users-ifae/rgrau/EBL-splines/Angres.txt', skiprows = 11)
     Angresall = pd.DataFrame(fileAng)
     Angresall = Angresall.rename(columns={ 0 : 'E [TeV]', 1: 'Angular resolution (deg)'})
     AngresE = Angresall['E [TeV]'].to_numpy()
@@ -129,7 +129,7 @@ if Telescope == "CTAN_alpha":
     Angres_reb = log_interp1d(AngresE, Angres, E_EBL[2:37])
 
     #Background:
-    fileBkg = np.loadtxt('Bkg50h.txt', skiprows = 10)
+    fileBkg = np.loadtxt('/data/magic/users-ifae/rgrau/EBL-splines/Bkg50h.txt', skiprows = 10)
     Bkgpd = pd.DataFrame(fileBkg)
     Bkgpd = Bkgpd.rename(columns={ 0 : 'E_min (TeV)', 1: 'E_max (TeV)', 2: 'Bck Rate (Hz/deg^2)'})
 
@@ -181,7 +181,7 @@ if Telescope == "CTAN_alpha":
 
     if Energy_migration:
 
-        fileEres = np.loadtxt('Eres.txt', skiprows = 8)
+        fileEres = np.loadtxt('/data/magic/users-ifae/rgrau/EBL-splines/Eres.txt', skiprows = 8)
         Eresall = pd.DataFrame(fileEres)
         Eresall = Eresall.rename(columns={ 0 : 'E [TeV]', 1: 'Energy resolution (deg)'})
         EresE = Eresall['E [TeV]'].to_numpy()
@@ -210,7 +210,7 @@ else:
 
 xdata = E_final
 datetime = time.strftime("%Y%m%d%H%M%S")
-hdf5filename = "EBL_fit_MC_{data}_nit{nit}_{datetime}.hdf5".format(data=fit_func_name, nit = niter, datetime = datetime)
+hdf5filename = "/data/magic/users-ifae/rgrau/EBL-splines/EBL_fit_MC_{data}_nit{nit}_{datetime}.hdf5".format(data=fit_func_name, nit = niter, datetime = datetime)
 savefile = h5py.File(hdf5filename, "w")
 
 if Forward_folding:
@@ -289,7 +289,7 @@ if Forward_folding:
             my_generator = np.random.default_rng(rng_num)
             Non, Noff = my_generator.poisson(mu_on), my_generator.poisson(5 * mu_off)
             Non_u, Noff_u = np.sqrt(Non), np.sqrt(Noff)
-            chisqs = Parallel(n_jobs=-1)(delayed(process)(alpha0) for alpha0 in alphas)
+            chisqs = Parallel(n_jobs=6)(delayed(process)(alpha0) for alpha0 in alphas)
 
             print("The minimum for the -2logL is at: ", alphas[np.where(chisqs == min(chisqs))])
             plt.plot(alphas, chisqs, 'o')
@@ -306,7 +306,7 @@ if Forward_folding:
         mu_on = mu_vec_final + bckgmu_final
         mu_off = bckgmu_final 
 
-        chisqs_iter = Parallel(n_jobs=-1)(delayed(process2)(random_num, alphas, mu_on, mu_off) for random_num in range(niter))
+        chisqs_iter = Parallel(n_jobs=6)(delayed(process2)(random_num, alphas, mu_on, mu_off) for random_num in range(niter))
 
         dset = savefile.create_dataset("alphas", data = alphas_iter, dtype='float')
         dset = savefile.create_dataset("chisqs", data = chisqs_iter, dtype='float')
@@ -354,5 +354,3 @@ else:
         
         dset = savefile.create_dataset("alphas", data = alphas_iter, dtype='float')
         dset = savefile.create_dataset("chisqs", data = chisqs_iter, dtype='float')
-
-print("--- %m seconds ---" % (time.time() - start_time))
