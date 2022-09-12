@@ -1,0 +1,17 @@
+executable = /data/magic/users-ifae/rgrau/EBL-splines/EBL_mult2.sh
+arguments = $(iter)
+output = Condor_logs/EBL-$(ClusterId).$(ProcId).out
+error = Condor_logs/EBL-$(ClusterId).$(ProcId).err
+log = Condor_logs/EBL-$(ClusterId).$(ProcId).log
+environment = PATH = $ENV(PATH); SOFT_DIR = /data/magic/users-ifae/rgrau/pythonenv; OTHER_DIR= /data/magic/users-ifae/rgrau/EBL-splines
+
+request_memory = 2 GB
+request_cpus = 1
+request_disk = 2 GB
+
++flavour="short"
+
+notify_user = rgrau@ifae.es
+notification = Never
+
+queue iter from niter_1000.txt
