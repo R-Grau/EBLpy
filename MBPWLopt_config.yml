@@ -1,7 +1,0 @@
-EBLscale: 0.0
-deltalogE: 1
-filepath: ~/Desktop/EBL_Gamma2016/EBL_samples/PKS1441+25_2015/data/nominal/flute/Output_flute.root
-maxEfirst: 80.0
-minEfirst: 20.0
-n_steps: 20
-redshift: 0.03
