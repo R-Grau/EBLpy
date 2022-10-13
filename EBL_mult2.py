@@ -51,6 +51,11 @@ else:
     knots = 3
     Efirst = 3
     Elast = 3
+    
+if Telescope == "CTAN_alpha":
+    Nwobbles = 5
+elif Telescope == "MAGIC":
+    Nwobbles = 4
 
 #define fit function depending on the selected one in the configuration:
 fit_func = fit_func_select(fit_func_name, knots, Efirst, Elast)
@@ -65,7 +70,7 @@ if Forward_folding:
             mu_bg = mu_BG(mu_gam, Non, Noff)
             min_num_gauss = 20
             conditions = [((Non >= min_num_gauss) & (Noff >= min_num_gauss)), (Non == 0.), (Noff == 0.), (Non != 0.) & (Noff != 0.)]
-            choices = [Gauss_logL(Non, Noff, mu_gam), Poisson_logL_Non0(Non, Noff, mu_gam), Poisson_logL_Noff0(Non, Noff, mu_gam), Poisson_logL(Non, Noff, mu_gam, mu_bg)]
+            choices = [Gauss_logL(Non, Noff, mu_gam, Nwobbles), Poisson_logL_Non0(Non, Noff, mu_gam, Nwobbles), Poisson_logL_Noff0(Non, Noff, mu_gam, Nwobbles), Poisson_logL(Non, Noff, mu_gam, mu_bg, Nwobbles)]
             res = np.select(conditions, choices, default = 999999999)
             return np.sum(res)
             
@@ -81,7 +86,7 @@ if Forward_folding:
             mu_bg_final = mu_bg[9:24]
             min_num_gauss = 20
             conditions = [((Non_final >= min_num_gauss) & (Noff_final >= min_num_gauss)), (Non_final == 0.), (Noff_final == 0.), (Non_final != 0.) & (Noff_final != 0.)]
-            choices = [Gauss_logL(Non_final, Noff_final, mu_gam_final), Poisson_logL_Non0(Non_final, Noff_final, mu_gam_final), Poisson_logL_Noff0(Non_final, Noff_final, mu_gam_final), Poisson_logL(Non_final, Noff_final, mu_gam_final, mu_bg_final)]
+            choices = [Gauss_logL(Non_final, Noff_final, mu_gam_final, Nwobbles), Poisson_logL_Non0(Non_final, Noff_final, mu_gam_final, Nwobbles), Poisson_logL_Noff0(Non_final, Noff_final, mu_gam_final, Nwobbles), Poisson_logL(Non_final, Noff_final, mu_gam_final, mu_bg_final, Nwobbles)]
             res = np.select(conditions, choices, default = 999999999)
             return np.sum(res)
 
@@ -140,7 +145,6 @@ else:
     raise Exception('The simulated spectrum "{func}" has not been implemented.'.format(func = Spectrum_func_name))
 
 if Telescope == "CTAN_alpha": #compute the values we need if the telescope selected is CTAN_alpha (needs to be changed as the Response function has to be changed)
-    
     #Effective area:
     fileEA = np.loadtxt('/data/magic/users-ifae/rgrau/EBL-splines/EffArea50h.txt', skiprows = 11)
     EffA = pd.DataFrame(fileEA)
@@ -240,7 +244,7 @@ if Telescope == "CTAN_alpha": #compute the values we need if the telescope selec
     tau = tau_EBL[7:33]
 
 elif Telescope == "MAGIC": #compute values needed for minimization if the selected telescope is MAGIC
-
+    
     Bckg = uproot.open("/data/magic/users-ifae/rgrau/EBL-splines/Output_flute.root:hEstBckgE")#load background values
     bckgmu_final = Bckg.values() #counts in 42480s (can be normalized for any time but as the migmatrix is for that time, only use that time).
 
@@ -300,9 +304,9 @@ iter = int(sys.argv[1])
 
 #name the folder where the data will be stored and the datafile name
 
-if not os.path.exists('/data/magic/users-ifae/rgrau/EBL-splines/EBL{niter}_{func1}({curv})_{func2}_{telescope}_with_{systematics}_Systematics'.format(curv = LP_curvature, func1 = Spectrum_func_name, func2 = fit_func_name, niter = niter, knots = knots, telescope = Telescope, systematics = systematics)):
-    os.mkdir('/data/magic/users-ifae/rgrau/EBL-splines/EBL{niter}_{func1}({curv})_{func2}_{telescope}_with_{systematics}_Systematics'.format(curv = LP_curvature, func1 = Spectrum_func_name, func2 = fit_func_name, niter = niter, knots = knots, telescope = Telescope, systematics = systematics))
-hdf5filename = "/data/magic/users-ifae/rgrau/EBL-splines/EBL{niter}_{func1}({curv})_{func2}_{telescope}_with_{systematics}_Systematics/EBL_mult_nit{nit}of{niter}_{datetime}.hdf5".format(curv = LP_curvature, func1 = Spectrum_func_name, func2 = fit_func_name ,nit = iter, niter = niter, datetime = datetime, knots = knots, telescope = Telescope, systematics = systematics)
+if not os.path.exists('/data/magic/users-ifae/rgrau/EBL-splines/EBL{niter}_{func1}({curv})_{func2}_{telescope}_with_{systematics}_Systematics_4w'.format(curv = LP_curvature, func1 = Spectrum_func_name, func2 = fit_func_name, niter = niter, knots = knots, telescope = Telescope, systematics = systematics)):
+    os.mkdir('/data/magic/users-ifae/rgrau/EBL-splines/EBL{niter}_{func1}({curv})_{func2}_{telescope}_with_{systematics}_Systematics_4w'.format(curv = LP_curvature, func1 = Spectrum_func_name, func2 = fit_func_name, niter = niter, knots = knots, telescope = Telescope, systematics = systematics))
+hdf5filename = "/data/magic/users-ifae/rgrau/EBL-splines/EBL{niter}_{func1}({curv})_{func2}_{telescope}_with_{systematics}_Systematics_4w/EBL_mult_nit{nit}of{niter}_{datetime}.hdf5".format(curv = LP_curvature, func1 = Spectrum_func_name, func2 = fit_func_name ,nit = iter, niter = niter, datetime = datetime, knots = knots, telescope = Telescope, systematics = systematics)
 savefile = h5py.File(hdf5filename, "w")
 
 
@@ -325,7 +329,7 @@ if Forward_folding:
         alpha = initial_guess_pos
         rng_num = iter_num
         my_generator = np.random.default_rng(rng_num)
-        Non, Noff = my_generator.poisson(mu_on), my_generator.poisson(5 * mu_off)
+        Non, Noff = my_generator.poisson(mu_on), my_generator.poisson(Nwobbles * mu_off)
         Non_u, Noff_u = np.sqrt(Non), np.sqrt(Noff)
         things = fit(initial_guess=initial_guess_0)
         initial_guess_mat = ig_mat_create(fit_func_name, alphas, knots)
@@ -358,7 +362,7 @@ if Forward_folding:
 else:
 
     if Background: 
-        ydata, ydata_u, dNdE_b, dNdE_b_u = SED_gen(15, bckgmu_final, mu_vec_final, Effa_final, Ebinsw_final, Observation_time, xdata)
+        ydata, ydata_u, dNdE_b, dNdE_b_u = SED_gen(15, bckgmu_final, mu_vec_final, Effa_final, Ebinsw_final, Observation_time, xdata, Nwobbles)
     else:
         ydata, ydata_u, dNdE_b, dNdE_b_u = SED_gen_nobckg(15, mu_vec_final, Effa_final, Ebinsw_final, Observation_time, xdata)
 

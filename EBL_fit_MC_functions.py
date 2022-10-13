@@ -32,7 +32,7 @@ def normal_interp1d(E_before, y_before, E_after):
     return interpolated
 
 
-def SED_gen(rng_num, bckgmu, mu_vec, Effa, Ebinsw, Observation_time, E):
+def SED_gen(rng_num, bckgmu, mu_vec, Effa, Ebinsw, Observation_time, E, Nwobbles):
     my_generator = np.random.default_rng(rng_num)
     Simbckg1 = my_generator.poisson(bckgmu)
     # Simbckg1 = Simbckg1.astype(float)
@@ -40,7 +40,7 @@ def SED_gen(rng_num, bckgmu, mu_vec, Effa, Ebinsw, Observation_time, E):
     #     if Simbckg1[i] == 0:
     #         Simbckg1[i] = bckgmu[i]
     Simbckg1_u = np.sqrt(Simbckg1)
-    Simbckg5 = my_generator.poisson(5*bckgmu)/5
+    Simbckg5 = my_generator.poisson(Nwobbles*bckgmu)/Nwobbles
     # Simbckg5 = Simbckg5.astype(float)
     # for i in range(len(Simbckg5)):
     #     if Simbckg5[i] == 0:
@@ -166,10 +166,10 @@ def ordering_sigma(alphas, first_bin, last_bin, step, chisqs):
     sigma_intervals(2, chis_new, step, interpx)
     sigma_intervals(3, chis_new, step, interpx)
 
-def on_off_rnd(rng_num, bckgmu, mu_vec):
+def on_off_rnd(rng_num, bckgmu, mu_vec, Nwobbles):
     my_generator = np.random.default_rng(rng_num)
     Simbckg1 = my_generator.poisson(bckgmu)
-    Simbckg5 = my_generator.poisson(5*bckgmu)/5
+    Simbckg5 = my_generator.poisson(Nwobbles*bckgmu)/Nwobbles
     N = my_generator.poisson(mu_vec)
     # N[N==0] = 1
 
@@ -191,7 +191,7 @@ def SED_gen_nobckg(rng_num, mu_vec, Effa, Ebinsw, Observation_time, E):
     SED_u = np.square(E) * dNdE_b_u
     return SED, SED_u, dNdE_b, dNdE_b_u
 
-def mu_BG(mu_g, Non, Noff):
+def mu_BG(mu_g, Non, Noff): #check if Nwobbles has to be applied here
     mubg = ((-6 * mu_g) + Non + Noff + np.sqrt(np.square((6 * mu_g) - Non - Noff) + (24 * Noff * mu_g)))/12
     return mubg
 
@@ -200,9 +200,9 @@ def mu_BG(mu_g, Non, Noff):
 #     N = my_generator.poisson(mu)
 #     return N
 
-def FF_Likelihood(Non, Noff, mu_gamma, mu_bg):
+def FF_Likelihood(Non, Noff, mu_gamma, mu_bg, Nwobbles):
     mu_on = mu_gamma + mu_bg
-    mu_off = mu_bg * 5
+    mu_off = mu_bg * Nwobbles
     L = np.sum(poisson.pmf(k = Non, mu = mu_on) * poisson.pmf(k = Noff, mu = mu_off))
     return L
 
@@ -233,25 +233,25 @@ def dNdE_to_mu_MAGIC(dNdEa, Ebinw, migmatval, Eest):
     return mu_vec_reco
 
 
-def Poisson_logL(Non, Noff, mu_gam, mu_bg):
+def Poisson_logL(Non, Noff, mu_gam, mu_bg, Nwobbles):
     # print(Non, Noff, mu_gam, mu_bg)
-    logL = np.log(poisson.pmf(Non, mu_gam + mu_bg) * poisson.pmf(Noff, 5 * mu_bg))
+    logL = np.log(poisson.pmf(Non, mu_gam + mu_bg) * poisson.pmf(Noff, Nwobbles * mu_bg))
     logLmax = np.log(poisson.pmf(Non, Non) * poisson.pmf(Noff, Noff))
     return -2 * (logL - logLmax)
 
-def Poisson_logL_Non0(Non, Noff, mu_gam):
-    mu_bg = Noff / 6.
-    return Poisson_logL(Non, Noff, mu_gam, mu_bg)
+def Poisson_logL_Non0(Non, Noff, mu_gam, Nwobbles):
+    mu_bg = Noff / (1.+Nwobbles)
+    return Poisson_logL(Non, Noff, mu_gam, mu_bg, Nwobbles)
 
-def Poisson_logL_Noff0(Non, Noff, mu_gam):
-    fAlpha = 1/5
+def Poisson_logL_Noff0(Non, Noff, mu_gam, Nwobbles):
+    fAlpha = 1/Nwobbles
     mu_bg = fAlpha * Non / (1 + fAlpha) - mu_gam
     for i in range(len(mu_bg)):
         if mu_bg[i] < 0.:
             mu_bg[i] = 0
-    return Poisson_logL(Non, Noff, mu_gam, mu_bg)
+    return Poisson_logL(Non, Noff, mu_gam, mu_bg, Nwobbles)
 
-def Gauss_logL(Non, Noff, mu_gam):
-    diff = Non - Noff/5 - mu_gam
-    delta_diff = np.sqrt(Non + Noff/5)
+def Gauss_logL(Non, Noff, mu_gam, Nwobbles):
+    diff = Non - Noff/Nwobbles - mu_gam 
+    delta_diff = np.sqrt(Non + Noff/Nwobbles) 
     return np.square(diff)/np.square(delta_diff)
