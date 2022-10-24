@@ -17,7 +17,7 @@ import sys
 import os
 import uproot
 
-systematics = 0.04
+systematics = 0.038
 
 #load all config from config file:
 start_time = time.time()
