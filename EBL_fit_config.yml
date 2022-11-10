@@ -20,8 +20,8 @@ initial_guess_0:
 - 0.0
 - 0.0
 - 0.0
-initial_guess_pos: 2.0
+initial_guess_pos: 1.5
 knots: 3
 last_bin: 2.0
-niter: 10000
+niter: 50000
 step: 0.05

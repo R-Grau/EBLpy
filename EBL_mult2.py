@@ -306,6 +306,7 @@ iter = int(sys.argv[1])
 
 if not os.path.exists('/data/magic/users-ifae/rgrau/EBL-splines/EBL{niter}_{func1}({curv})_{func2}_{telescope}_with_{systematics}_Systematics_4w'.format(curv = LP_curvature, func1 = Spectrum_func_name, func2 = fit_func_name, niter = niter, knots = knots, telescope = Telescope, systematics = systematics)):
     os.mkdir('/data/magic/users-ifae/rgrau/EBL-splines/EBL{niter}_{func1}({curv})_{func2}_{telescope}_with_{systematics}_Systematics_4w'.format(curv = LP_curvature, func1 = Spectrum_func_name, func2 = fit_func_name, niter = niter, knots = knots, telescope = Telescope, systematics = systematics))
+    os.popen('cp /data/magic/users-ifae/rgrau/EBL-splines/EBL_fit_config.yml /data/magic/users-ifae/rgrau/EBL-splines/EBL{niter}_{func1}({curv})_{func2}_{telescope}_with_{systematics}_Systematics_4w/EBL_fit_config.yml'.format(curv = LP_curvature, func1 = Spectrum_func_name, func2 = fit_func_name, niter = niter, knots = knots, telescope = Telescope, systematics = systematics))
 hdf5filename = "/data/magic/users-ifae/rgrau/EBL-splines/EBL{niter}_{func1}({curv})_{func2}_{telescope}_with_{systematics}_Systematics_4w/EBL_mult_nit{nit}of{niter}_{datetime}.hdf5".format(curv = LP_curvature, func1 = Spectrum_func_name, func2 = fit_func_name ,nit = iter, niter = niter, datetime = datetime, knots = knots, telescope = Telescope, systematics = systematics)
 savefile = h5py.File(hdf5filename, "w")
 
