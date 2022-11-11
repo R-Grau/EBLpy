@@ -135,7 +135,7 @@ def ig_mat_create(fit_func_name, alphas, knots):
         initial_guess_mat = np.zeros((len(alphas)+1, knots+2))
     elif fit_func_name == "PWL":
         initial_guess_mat = np.zeros((len(alphas)+1, 2))
-    elif fit_func_name == "LP":
+    elif fit_func_name == "LP" or fit_func_name == "freeLP":
         initial_guess_mat = np.zeros((len(alphas)+1, 3))
     return initial_guess_mat
 
