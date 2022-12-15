@@ -169,12 +169,11 @@ def ordering_sigma(alphas, first_bin, last_bin, step, chisqs):
 def on_off_rnd(rng_num, bckgmu, mu_vec, Nwobbles):
     my_generator = np.random.default_rng(rng_num)
     Simbckg1 = my_generator.poisson(bckgmu)
-    Simbckg5 = my_generator.poisson(Nwobbles*bckgmu)/Nwobbles
+    Simbckg_wob = my_generator.poisson(Nwobbles*bckgmu)/Nwobbles
     N = my_generator.poisson(mu_vec)
-    # N[N==0] = 1
 
     ON = N + Simbckg1
-    OFF = Simbckg5
+    OFF = Simbckg_wob
 
     return ON, OFF
 
@@ -191,8 +190,8 @@ def SED_gen_nobckg(rng_num, mu_vec, Effa, Ebinsw, Observation_time, E):
     SED_u = np.square(E) * dNdE_b_u
     return SED, SED_u, dNdE_b, dNdE_b_u
 
-def mu_BG(mu_g, Non, Noff): #check if Nwobbles has to be applied here
-    mubg = ((-6 * mu_g) + Non + Noff + np.sqrt(np.square((6 * mu_g) - Non - Noff) + (24 * Noff * mu_g)))/12
+def mu_BG(mu_g, Non, Noff, Nwobbles): #check if Nwobbles has to be applied here
+    mubg = ((-(Nwobbles+1) * mu_g) + Non + Noff + np.sqrt(np.square(((Nwobbles+1) * mu_g) - Non - Noff) + (4*(Nwobbles+1) * Noff * mu_g)))/(2*(Nwobbles+1))
     return mubg
 
 # def N_rnd(rng_num, mu):
@@ -240,7 +239,7 @@ def Poisson_logL(Non, Noff, mu_gam, mu_bg, Nwobbles):
     return -2 * (logL - logLmax)
 
 def Poisson_logL_Non0(Non, Noff, mu_gam, Nwobbles):
-    mu_bg = Noff / (1.+Nwobbles)
+    mu_bg = Noff / (1. + Nwobbles)
     return Poisson_logL(Non, Noff, mu_gam, mu_bg, Nwobbles)
 
 def Poisson_logL_Noff0(Non, Noff, mu_gam, Nwobbles):
@@ -252,6 +251,6 @@ def Poisson_logL_Noff0(Non, Noff, mu_gam, Nwobbles):
     return Poisson_logL(Non, Noff, mu_gam, mu_bg, Nwobbles)
 
 def Gauss_logL(Non, Noff, mu_gam, Nwobbles):
-    diff = Non - Noff/Nwobbles - mu_gam 
+    diff = Non - Noff/Nwobbles - mu_gam #was Non - Noff/Nwobbles - mu_gam
     delta_diff = np.sqrt(Non + Noff/Nwobbles) 
     return np.square(diff)/np.square(delta_diff)
