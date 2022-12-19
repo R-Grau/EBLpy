@@ -81,7 +81,7 @@ def fit_func_select(fit_func_name, knots = 3, Efirst = 0.2 , Elast = 1.12):
                 phi[0] = phi_0
                 for i in range(knots):
                     gamma[i+1] = gamma[i] + delta_gamma[i]
-                    phi[i+1] = phi[i] * Ebr[i] ** delta_gamma[i]
+                    phi[i+1] = phi[i] * (Ebr[i]/0.25) ** delta_gamma[i]
                 for i in range(len(xdata)):
                     for j in range(knots):
                         if xdata[i]<Ebr[0]:
