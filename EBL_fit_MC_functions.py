@@ -66,16 +66,36 @@ def SED_gen(rng_num, bckgmu, mu_vec, Effa, Ebinsw, Observation_time, E, Nwobbles
 def fit_func_select(fit_func_name, knots = 3, Efirst = 0.2 , Elast = 1.12):
     if fit_func_name == "MBPWL":
         def fit_func(xdata, params):
-            if knots < 2 or knots > 30: #change this when adding more number of knots
-                raise Exception('knots have to be larger or equal than 3 and smaller than 30')
-            else:
+            if knots == 1:
                 polw = np.zeros(len(xdata))
-                Ebr = np.geomspace(Efirst, Elast, knots)
                 gamma = np.zeros(knots+1)
                 phi = np.zeros(knots+1)
                 phi_0 = params[0] #len(sqrtdelta_lam) = len(lam)-1 = len(phi)-1
                 gamma0 = params[1]
                 sqrtdelta_gamma = params[2:knots+2]
+                Eknot = Eknot
+                delta_gamma = np.square(sqrtdelta_gamma)
+                gamma[0] = gamma0
+                phi[0] = phi_0
+                gamma[1] = gamma[0] + delta_gamma[0]
+                phi[1] = phi[0] * (Eknot/0.25) ** delta_gamma[0]
+                for i in range(len(xdata)):
+                    if xdata[i] < Eknot:
+                        polw[i] = phi[0] * (xdata[i]/0.25) ** (-gamma[0])
+                    elif xdata[i] >= Eknot:
+                        polw[i] = phi[1] * (xdata[i]/0.25) ** (-gamma[1])
+                return polw
+            else:
+                polw = np.zeros(len(xdata))
+
+                gamma = np.zeros(knots+1)
+                phi = np.zeros(knots+1)
+                phi_0 = params[0] #len(sqrtdelta_lam) = len(lam)-1 = len(phi)-1
+                gamma0 = params[1]
+                sqrtdelta_gamma = params[2:knots+2]
+                Efirst = Efirst
+                Elast = Elast
+                Ebr = np.geomspace(Efirst, Elast, knots)
                 delta_gamma = np.square(sqrtdelta_gamma)
                 gamma[0] = gamma0
                 phi[0] = phi_0
@@ -90,7 +110,7 @@ def fit_func_select(fit_func_name, knots = 3, Efirst = 0.2 , Elast = 1.12):
                             polw[i] = phi[-1] * (xdata[i]/0.25) ** (-gamma[-1])
                         elif Ebr[j] <= xdata[i] < Ebr[j+1]:
                             polw[i] = phi[j+1] * (xdata[i]/0.25) ** (-gamma[j+1])
-            return polw
+                return polw
         return(fit_func)
 
     elif fit_func_name == "PWL":
