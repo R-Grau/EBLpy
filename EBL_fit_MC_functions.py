@@ -93,8 +93,6 @@ def fit_func_select(fit_func_name, knots = 3, Efirst = 0.2 , Elast = 1.12):
                 phi_0 = params[0] #len(sqrtdelta_lam) = len(lam)-1 = len(phi)-1
                 gamma0 = params[1]
                 sqrtdelta_gamma = params[2:knots+2]
-                Efirst = Efirst
-                Elast = Elast
                 Ebr = np.geomspace(Efirst, Elast, knots)
                 delta_gamma = np.square(sqrtdelta_gamma)
                 gamma[0] = gamma0
@@ -274,3 +272,7 @@ def Gauss_logL(Non, Noff, mu_gam, Nwobbles):
     diff = Non - Noff/Nwobbles - mu_gam #was Non - Noff/Nwobbles - mu_gam
     delta_diff = np.sqrt(Non + Noff/Nwobbles) 
     return np.square(diff)/np.square(delta_diff)
+
+def find_z(possible_z, source_z):
+    idx = np.argmin(np.abs(possible_z - source_z))
+    return possible_z[idx]
