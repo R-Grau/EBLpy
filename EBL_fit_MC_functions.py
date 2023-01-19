@@ -2,6 +2,7 @@ import numpy as np
 import scipy.interpolate as interpolate
 from scipy.integrate import quad
 from scipy.stats import poisson
+import pandas as pd
 
 def chisq(obs, exp, error):
     return np.sum(np.square(obs - exp) / np.square(error))
@@ -31,6 +32,27 @@ def normal_interp1d(E_before, y_before, E_after):
     interpolated = interp_func(E_after)
     return interpolated
 
+def tau_interp(E_after, z_after, EBL_Model, kind_of_interp = "linear"):
+    if EBL_Model == "Dominguez":
+        possible_z = np.array([0.01, 0.02526316, 0.04052632, 0.05578947, 0.07105263, 0.08631579, 0.10157895, 0.11684211, 0.13210526, 0.14736842, 0.16263158, 0.17789474, 0.19315789, 0.20842105, 0.22368421, 0.23894737, 0.25421053, 0.26947368, 0.28473684, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75])
+        file = np.loadtxt('/home/rgrau/Desktop/EBL-splines/tau_dominguez11.out')
+        pdfile = pd.DataFrame(file)
+        pdfile = pdfile.rename(columns={ 0 : 'E [TeV]', 1: 'tau z=0.01', 2: 'tau z=0.02526316', 3: 'tau z=0.04052632', 4: 'tau z=0.05578947', 5: 'tau z=0.07105263', 6: 'tau z=0.08631579', 7: 'tau z=0.10157895', 8: 'tau z=0.11684211', 9: 'tau z=0.13210526', 10: 'tau z=0.14736842', 11: 'tau z=0.16263158', 12: 'tau z=0.17789474', 13: 'tau z=0.19315789', 14: 'tau z=0.20842105', 15: 'tau z=0.22368421', 16: 'tau z=0.23894737', 17: 'tau z=0.25421053', 18: 'tau z=0.26947368', 19: 'tau z=0.28473684', 20: 'tau z=0.3' , 21: 'tau z=0.35', 22: 'tau z=0.4' , 23: 'tau z=0.45', 24: 'tau z=0.5', 25: 'tau z=0.55', 26: 'tau z=0.6', 27: 'tau z=0.65', 28: 'tau z=0.7' , 29: 'tau z=0.75'})
+        E_before = pdfile['E [TeV]'].to_numpy() #energy bins
+        tau_matrix = np.zeros([len(possible_z), len(E_before)])
+        for i in range(len(possible_z)):
+            tau_matrix[i] = pdfile['tau z={0}'.format(possible_z[i])].to_numpy() #tau bins
+    else:
+        raise Exception('The EBL model "{func}" has not been implemented.'.format(func = EBL_Model))        
+
+    if kind_of_interp == "linear":
+        interpolation = interpolate.interp2d(E_before, possible_z, tau_matrix)
+        tau_new = interpolation(E_after, z_after)
+    elif kind_of_interp == "log":
+        log_interpolation = interpolate.interp2d(np.log10(E_before), np.log10(possible_z), np.log10(tau_matrix))
+        tau_new = np.power(10, log_interpolation(np.log10(E_after), np.log10(z_after)))
+
+    return(tau_new)
 
 def SED_gen(rng_num, bckgmu, mu_vec, Effa, Ebinsw, Observation_time, E, Nwobbles):
     my_generator = np.random.default_rng(rng_num)
@@ -63,7 +85,7 @@ def SED_gen(rng_num, bckgmu, mu_vec, Effa, Ebinsw, Observation_time, E, Nwobbles
     SED_u = np.square(E) * dNdE_b_u
     return SED, SED_u, dNdE_b, dNdE_b_u
 
-def fit_func_select(fit_func_name, knots = 3, Efirst = 0.2 , Elast = 1.12):
+def fit_func_select(fit_func_name, knots = 3, Efirst = 0.2 , DeltaE = 1.12):
     if fit_func_name == "MBPWL":
         def fit_func(xdata, params):
             if knots == 1:
@@ -93,6 +115,7 @@ def fit_func_select(fit_func_name, knots = 3, Efirst = 0.2 , Elast = 1.12):
                 phi_0 = params[0] #len(sqrtdelta_lam) = len(lam)-1 = len(phi)-1
                 gamma0 = params[1]
                 sqrtdelta_gamma = params[2:knots+2]
+                Elast = Efirst + DeltaE
                 Ebr = np.geomspace(Efirst, Elast, knots)
                 delta_gamma = np.square(sqrtdelta_gamma)
                 gamma[0] = gamma0
