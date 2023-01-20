@@ -362,11 +362,11 @@ if Forward_folding:
 
     alphas = alphas_creation(initial_guess_pos, first_bin, last_bin, step)
 
-    mu_on = mu_vec_final + bckgmu_final
-    mu_off = bckgmu_final 
     my_generator2 = np.random.default_rng(iter)
-    mu_on_ps, mu_off_ps = my_generator2.normal(mu_on, systematics * mu_on), mu_off #to add some systematics to try to fit the real results
-    chisqs = process2(iter, alphas, mu_on_ps, mu_off_ps)
+    mu_on = my_generator2.normal(mu_vec_final, systematics * mu_vec_final) + bckgmu_final #to add some systematics to try to fit the real results
+    mu_off = bckgmu_final 
+
+    chisqs = process2(iter, alphas, mu_on, mu_off)
 
     dset = savefile.create_dataset("alphas", data = alphas, dtype='float')
     dset = savefile.create_dataset("chisqs", data = chisqs, dtype='float')
