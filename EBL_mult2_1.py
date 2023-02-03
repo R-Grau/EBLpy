@@ -17,7 +17,7 @@ import sys
 import os
 import uproot
 
-systematics = 0.07
+systematics = 0.0
 Emin = 0.06
 Emax = 15.
 Extratxt = "errors_x10"
