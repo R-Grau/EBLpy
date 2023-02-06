@@ -231,7 +231,7 @@ def SED_gen_nobckg(rng_num, mu_vec, Effa, Ebinsw, Observation_time, E):
     SED_u = np.square(E) * dNdE_b_u
     return SED, SED_u, dNdE_b, dNdE_b_u
 
-def mu_BG(mu_g, Non, Noff, Nwobbles): #check if Nwobbles has to be applied here
+def mu_BG(mu_g, Non, Noff, Nwobbles):
     mubg = ((-(Nwobbles+1) * mu_g) + Non + Noff + np.sqrt(np.square(((Nwobbles+1) * mu_g) - Non - Noff) + (4*(Nwobbles+1) * Noff * mu_g)))/(2*(Nwobbles+1))
     return mubg
 
@@ -273,9 +273,44 @@ def dNdE_to_mu_MAGIC(dNdEa, Ebinw, migmatval, Eest):
     return mu_vec_reco
 
 
+def Poisson_logL_IRF(Non, Noff, mu_gam, delta_mu_gam, mu_bg, Nwobbles): #expectedgammas = mu_gam, bckg = Noff/Nwobbles, observed = Non
+    logL = np.log(poisson.pmf(Non, mu_gam + mu_bg)) + np.log(poisson.pmf(Noff, Nwobbles * mu_bg))
+    logLmax = np.log(poisson.pmf(Non, Non) * poisson.pmf(Noff, Noff))
+    return -2 * (logL - logLmax)
+
+def Poisson_logL_Non0_IRF(Non, Noff, mu_gam, delta_mu_gam, Nwobbles): #canviat per IRF
+    mu_bg = Noff / (1. + Nwobbles)
+    mu_gam2 = -np.square(delta_mu_gam) + mu_gam
+    for i in range(len(mu_gam2)): #FIXME ?
+        if mu_gam2[i] < 0.:
+            mu_gam2[i] = 0
+    return Poisson_logL_IRF(Non, Noff, mu_gam2, delta_mu_gam, mu_bg, Nwobbles)
+
+def Poisson_logL_Noff0_IRF(Non, Noff, mu_gam, delta_mu_gam, Nwobbles):
+    fAlpha = 1/Nwobbles
+    mu_bg = fAlpha * Non / (1 + fAlpha) - mu_gam -np.square(delta_mu_gam)/fAlpha
+    for i in range(len(mu_bg)):
+        if mu_bg[i] < 0.:
+            mu_bg[i] = 0
+            a = 1.
+            b = -mu_gam + np.square(delta_mu_gam)
+            c = -Non + np.square(delta_mu_gam)
+            mu_gam2 = (-b + np.sqrt(np.square(b) - 4 * a * c)) / (2. * a)
+        else:
+            mu_gam2 = mu_gam + np.square(delta_mu_gam) / fAlpha
+    return Poisson_logL_IRF(Non, Noff, mu_gam2, delta_mu_gam, mu_bg, Nwobbles)
+
+def Gauss_logL_IRF(Non, Noff, mu_gam, delta_mu_gam, Nwobbles): #canviat per IRF
+    Noff_n = Noff/Nwobbles #Noff_n_unc = np.sqrt(Noff_n) but as we have to ^2 later we just don't define it. (same for Non_u)
+    diff = Non - Noff_n - mu_gam #was Non - Noff/Nwobbles - mu_gam
+    delta_exp = np.sqrt(np.square(delta_mu_gam) + Noff_n)
+    delta_diff = np.sqrt(Non + np.square(delta_exp)) 
+    return np.square(diff)/np.square(delta_diff)
+
+###################remoove this later
 def Poisson_logL(Non, Noff, mu_gam, mu_bg, Nwobbles):
     # print(Non, Noff, mu_gam, mu_bg)
-    logL = np.log(poisson.pmf(Non, mu_gam + mu_bg) * poisson.pmf(Noff, Nwobbles * mu_bg)) #change this to sum of logs.(and maybie add gaussian)
+    logL = np.log(poisson.pmf(Non, mu_gam + mu_bg)) + np.log10(poisson.pmf(Noff, Nwobbles * mu_bg))
     logLmax = np.log(poisson.pmf(Non, Non) * poisson.pmf(Noff, Noff))
     return -2 * (logL - logLmax)
 
@@ -295,6 +330,7 @@ def Gauss_logL(Non, Noff, mu_gam, Nwobbles):
     diff = Non - Noff/Nwobbles - mu_gam #was Non - Noff/Nwobbles - mu_gam
     delta_diff = np.sqrt(Non + Noff/Nwobbles) 
     return np.square(diff)/np.square(delta_diff)
+#########################################################
 
 def find_z(possible_z, source_z):
     idx = np.argmin(np.abs(possible_z - source_z))
