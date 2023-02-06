@@ -275,7 +275,7 @@ def dNdE_to_mu_MAGIC(dNdEa, Ebinw, migmatval, Eest):
 
 def Poisson_logL(Non, Noff, mu_gam, mu_bg, Nwobbles):
     # print(Non, Noff, mu_gam, mu_bg)
-    logL = np.log(poisson.pmf(Non, mu_gam + mu_bg) * poisson.pmf(Noff, Nwobbles * mu_bg)) #change this to sum of logs.(and maybie add gaussian)
+    logL = np.log(poisson.pmf(Non, mu_gam + mu_bg)) + np.log10(poisson.pmf(Noff, Nwobbles * mu_bg)) #change this to sum of logs.(and maybie add gaussian)
     logLmax = np.log(poisson.pmf(Non, Non) * poisson.pmf(Noff, Noff))
     return -2 * (logL - logLmax)
 
