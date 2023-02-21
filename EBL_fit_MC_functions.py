@@ -272,6 +272,14 @@ def dNdE_to_mu_MAGIC(dNdEa, Ebinw, migmatval, Eest):
         mu_vec_reco[i] = np.sum(mu_vec * migmatval[:,i])
     return mu_vec_reco
 
+def dNdE_to_mu_MAGIC_IRF(dNdEa, Ebinw, migmatval, migmaterr, Eest):
+    mu_vec = dNdEa * Ebinw
+    mu_vec_reco = np.zeros(len(Eest))
+    mu_vec_reco_u = np.zeros(len(Eest))
+    for i in range(len(Eest)):
+        mu_vec_reco[i] = np.sum(mu_vec * migmatval[:,i])
+        mu_vec_reco_u[i] = np.sqrt(np.sum(mu_vec * migmaterr[:,i]))
+    return mu_vec_reco, mu_vec_reco_u
 
 def Poisson_logL_IRF(Non, Noff, mu_gam, delta_mu_gam, mu_bg, Nwobbles): #expectedgammas = mu_gam, bckg = Noff/Nwobbles, observed = Non
     logL = np.log(poisson.pmf(Non, mu_gam + mu_bg)) + np.log(poisson.pmf(Noff, Nwobbles * mu_bg))
@@ -307,7 +315,6 @@ def Gauss_logL_IRF(Non, Noff, mu_gam, delta_mu_gam, Nwobbles): #canviat per IRF
     delta_diff = np.sqrt(Non + np.square(delta_exp)) 
     return np.square(diff)/np.square(delta_diff)
 
-###################remoove this later
 def Poisson_logL(Non, Noff, mu_gam, mu_bg, Nwobbles):
     # print(Non, Noff, mu_gam, mu_bg)
     logL = np.log(poisson.pmf(Non, mu_gam + mu_bg)) + np.log10(poisson.pmf(Noff, Nwobbles * mu_bg))
