@@ -147,7 +147,7 @@ def fit_func_select(fit_func_name, knots = 3, Efirst = 0.2 , DeltaE = 1.12):
             phi0 = params[0]
             alpha = params[1]
             beta = params[2]
-            #Enorm = 1TeV #if it is 1 TeV no need ot include it (if it is different, need to add it to te LP function)
+            #Enorm = 1TeV  # (it is 0.25 TeV set by default) if it is 1 TeV no need ot include it (if it is different, need to add it to te LP function)
             LP = phi0 * np.power((xdata/0.25), (-alpha - beta * beta * np.log(xdata/0.25)))
             return LP
         return(fit_func)

@@ -17,10 +17,10 @@ import sys
 import os
 import uproot
 
-systematics = 0.0
+systematics = 0.07
 Emin = 0.06
 Emax = 15.
-Extratxt = "errors_x10"
+Extratxt = "errors_offr3"
 #load all config from config file:
 start_time = time.time()
 with open("/data/magic/users-ifae/rgrau/EBL-splines/EBL_fit_config2_1.yml", "r") as f:
@@ -61,21 +61,21 @@ fit_func = fit_func_select(fit_func_name, knots, Efirst, DeltaE)
 if Forward_folding:
     if Telescope == "CTAN_alpha": #this part needs to be changed to include the real CTAN_alpha configuration
         print("CTAN-alpha to be configured soon")
-        # Nwobbles = 5
+        # Noffregions = 5
         # def m2LogL(params):
         #     xdata = E_EBL
         #     mtau = -tau
         #     mu_gam0 = dNdE_to_mu((fit_func(xdata, params) * np.exp(mtau * alpha))[2:37], Effa_reb, Ebinsw[2:37], Observation_time, Ebins, Eres_reb2, E_EBL[2:37])
         #     mu_gam = mu_gam0[5:-4]
-        #     mu_bg = mu_BG(mu_gam, Non, Noff, Nwobbles)
+        #     mu_bg = mu_BG(mu_gam, Non, Noff, Noffregions)
         #     min_num_gauss = 20
         #     conditions = [((Non >= min_num_gauss) & (Noff >= min_num_gauss)), (Non == 0.), (Noff == 0.), (Non != 0.) & (Noff != 0.)]
-        #     choices = [Gauss_logL(Non, Noff, mu_gam, Nwobbles), Poisson_logL_Non0(Non, Noff, mu_gam, Nwobbles), Poisson_logL_Noff0(Non, Noff, mu_gam, Nwobbles), Poisson_logL(Non, Noff, mu_gam, mu_bg, Nwobbles)]
+        #     choices = [Gauss_logL(Non, Noff, mu_gam, Noffregions), Poisson_logL_Non0(Non, Noff, mu_gam, Noffregions), Poisson_logL_Noff0(Non, Noff, mu_gam, Noffregions), Poisson_logL(Non, Noff, mu_gam, mu_bg, Noffregions)]
         #     res = np.select(conditions, choices, default = 999999999)
         #     return np.sum(res)
             
     elif Telescope == "MAGIC":
-        Nwobbles = 4
+        Noffregions = 3
         def m2LogL(params):
             xdata = Etrue
             mtau = -tau
@@ -83,11 +83,11 @@ if Forward_folding:
             mu_gam_final = mu_gam[minbin:maxbin]
             Non_final = Non[minbin:maxbin] 
             Noff_final = Noff[minbin:maxbin]
-            mu_bg = mu_BG(mu_gam, Non, Noff, Nwobbles)
+            mu_bg = mu_BG(mu_gam, Non, Noff, Noffregions)
             mu_bg_final = mu_bg[minbin:maxbin]
             min_num_gauss = 20
             conditions = [((Non_final >= min_num_gauss) & (Noff_final >= min_num_gauss)), (Non_final == 0.), (Noff_final == 0.), (Non_final != 0.) & (Noff_final != 0.)]
-            choices = [Gauss_logL(Non_final, Noff_final, mu_gam_final, Nwobbles), Poisson_logL_Non0(Non_final, Noff_final, mu_gam_final, Nwobbles), Poisson_logL_Noff0(Non_final, Noff_final, mu_gam_final, Nwobbles), Poisson_logL(Non_final, Noff_final, mu_gam_final, mu_bg_final, Nwobbles)]
+            choices = [Gauss_logL(Non_final, Noff_final, mu_gam_final, Noffregions), Poisson_logL_Non0(Non_final, Noff_final, mu_gam_final, Noffregions), Poisson_logL_Noff0(Non_final, Noff_final, mu_gam_final, Noffregions), Poisson_logL(Non_final, Noff_final, mu_gam_final, mu_bg_final, Noffregions)]
             res = np.select(conditions, choices, default = 999999999)
             return np.sum(res)
 
@@ -349,7 +349,7 @@ if Forward_folding:
         alpha = initial_guess_pos
         rng_num = iter_num
         my_generator = np.random.default_rng(rng_num)
-        Non, Noff = my_generator.poisson(mu_on), my_generator.poisson(Nwobbles * mu_off)
+        Non, Noff = my_generator.poisson(mu_on), my_generator.poisson(Noffregions * mu_off)
         Non_u, Noff_u = np.sqrt(Non), np.sqrt(Noff)
         things = fit(initial_guess=initial_guess_0)
         initial_guess_mat = ig_mat_create(fit_func_name, alphas, knots)
@@ -385,7 +385,7 @@ if Forward_folding:
 else:
     print("Use Forward Folding please")
     # if Background: 
-    #     ydata, ydata_u, dNdE_b, dNdE_b_u = SED_gen(15, bckgmu_final, mu_vec_final, Effa_final, Ebinsw_final, Observation_time, xdata, Nwobbles)
+    #     ydata, ydata_u, dNdE_b, dNdE_b_u = SED_gen(15, bckgmu_final, mu_vec_final, Effa_final, Ebinsw_final, Observation_time, xdata, Noffregions)
     # else:
     #     ydata, ydata_u, dNdE_b, dNdE_b_u = SED_gen_nobckg(15, mu_vec_final, Effa_final, Ebinsw_final, Observation_time, xdata)
 
