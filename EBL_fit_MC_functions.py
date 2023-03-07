@@ -194,7 +194,7 @@ def sigma_intervals(sigma, chis_new, step, interpx):
     if sigma == 1:
         print("The minimum is at alpha = ", interpx[np.argmin(chis_new)], " + ", upper_bound-interpx[np.argmin(chis_new)], " - ", interpx[np.argmin(chis_new)] - lower_bound)
     else:
-           print("The {sigma} sigma interval is at alpha = ".format(sigma = sigma), interpx[np.argmin(chis_new)], " + ", upper_bound-interpx[np.argmin(chis_new)], " - ", interpx[np.argmin(chis_new)] - lower_bound)
+        print("The {sigma} sigma interval is at alpha = ".format(sigma = sigma), interpx[np.argmin(chis_new)], " + ", upper_bound-interpx[np.argmin(chis_new)], " - ", interpx[np.argmin(chis_new)] - lower_bound)
  
 def ordering_sigma(alphas, first_bin, last_bin, step, chisqs):
     order = np.argsort(alphas)
@@ -273,7 +273,6 @@ def dNdE_to_mu_MAGIC(dNdEa, Ebinw, migmatval, Eest):
     return mu_vec_reco
 
 def best_mubg_mugam_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
-
     def mu_gam_f(eps, mu_gam, delta_mu_gam):
         return mu_gam + eps * delta_mu_gam
     def mu_BG_2_deq(alpha, Noff, Non, mu_gam):
@@ -288,19 +287,21 @@ def best_mubg_mugam_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
     b = delta_mu_gam * (1 - fAlpha) - mu_gam/delta_mu_gam * fAlpha
     c = fAlpha * (Non + Noff) + np.square(delta_mu_gam) + mu_gam * (1 - fAlpha)
     d = delta_mu_gam * (mu_gam + fAlpha * Noff - Non)
-    
-    epsilon = np.roots([a, b, c, d])
-    epsilon2 = np.real(epsilon[np.isreal(epsilon)])
-    chi2proxy = np.zeros(len(epsilon2))
-    mu_gam2 = np.zeros(len(epsilon2))
-    mu_bg2 = np.zeros(len(epsilon2))
-
-    for i, eps in enumerate(epsilon2):
-        mu_gam2[i] = mu_gam_f(eps, mu_gam, delta_mu_gam)
-        mu_bg2[i] = mu_BG_2_deq(fAlpha, Noff, Non, mu_gam2)
-
-        chi2proxy[i] = -2*(np.log(poisson.pmf(Non, mu_bg2+mu_gam2)) + np.log(poisson.pmf(Noff, mu_bg2/fAlpha)) - 0.5*eps*eps)
-    best_mugam, best_mubg = mu_gam2[np.argmin(chi2proxy)], mu_bg2[np.argmin(chi2proxy)]
+    best_mubg = np.zeros(len(mu_gam))
+    best_mugam = np.zeros(len(mu_gam))
+    print(len(b))
+    for j in range(len(b)):
+        print(j)
+        epsilon = np.roots([a, b[j], c[j], d[j]])
+        epsilon2 = np.real(epsilon[np.isreal(epsilon)])
+        chi2proxy = np.zeros(len(epsilon2))
+        mu_gam2 = np.zeros(len(epsilon2))
+        mu_bg2 = np.zeros(len(epsilon2))
+        for i, eps in enumerate(epsilon2):
+            mu_gam2[i] = mu_gam_f(eps, mu_gam[j], delta_mu_gam[j])
+            mu_bg2[i] = mu_BG_2_deq(fAlpha, Noff[j], Non[j], mu_gam2[i])
+            chi2proxy[i] = -2*(np.log(poisson.pmf(Non[j], mu_bg2[i]+mu_gam2[i])) + np.log(poisson.pmf(Noff[j], mu_bg2[i]/fAlpha)) - 0.5*eps*eps)
+        best_mugam[j], best_mubg[j] = mu_gam2[np.argmin(chi2proxy)], mu_bg2[np.argmin(chi2proxy)]
     return best_mugam, best_mubg
 
 def dNdE_to_mu_MAGIC_IRF(dNdEa, Ebinw, migmatval, migmaterr, Eest):
@@ -349,9 +350,10 @@ def Poisson_logL_noIRF_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
 
 def Poisson_logL_else_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
     mu_gam2, mu_bg = best_mubg_mugam_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions)
-    if mu_gam2 < 0.:
-        mu_gam2 = 0
-        mu_bg = (Non + Noff)/ (1 + Noffregions)
+    for i in range(len(mu_gam2)):
+        if mu_gam2[i] < 0.:
+            mu_gam2[i] = 0
+            mu_bg[i] = (Non[i] + Noff[i])/ (1 + Noffregions)
     return Poisson_logL_IRF(Non, Noff, mu_gam, delta_mu_gam, mu_bg, Noffregions)
 
 
