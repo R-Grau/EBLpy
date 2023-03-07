@@ -8,10 +8,11 @@ Norm: 0.25
 Observation_time: 42480
 Ph_index: 2.03
 Source_flux: 8.7e-06
+Source_z: 0.212
 Spectrum_func_name: PWL
 Telescope: MAGIC
 first_bin: 0.0
-fit_func_name: freeLP
+fit_func_name: LP
 initial_guess_0:
 - 5.0e-06
 - 2.0
