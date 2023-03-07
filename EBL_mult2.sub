@@ -14,4 +14,4 @@ request_disk = 2 GB
 notify_user = rgrau@ifae.es
 notification = Never
 
-queue iter from niter_100.txt
+queue iter from niter_1000.txt
