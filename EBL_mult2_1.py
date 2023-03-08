@@ -20,7 +20,7 @@ import uproot
 systematics = 0.07
 Emin = 0.06
 Emax = 15.
-Extratxt = "errors_offr3"
+Extratxt = "errors_IRF_test_fix"
 #load all config from config file:
 start_time = time.time()
 with open("/data/magic/users-ifae/rgrau/EBL-splines/EBL_fit_config2_1.yml", "r") as f:
@@ -45,6 +45,7 @@ Ph_index = inp_config["Ph_index"]
 initial_guess_0 = inp_config["initial_guess_0"]
 LP_curvature = inp_config["LP_curvature"]
 Source_z = inp_config["Source_z"]
+IRF_u = inp_config["IRF_u"]
 
 if fit_func_name == "MBPWL":
     knots = inp_config["knots"]
@@ -79,15 +80,40 @@ if Forward_folding:
         def m2LogL(params):
             xdata = Etrue
             mtau = -tau
-            mu_gam = dNdE_to_mu_MAGIC((fit_func(xdata, params) * np.exp(mtau * alpha)), Ebinsw_Etrue, migmatval, Eest)
+            if IRF_u:
+                mu_gam, mu_gam_u = dNdE_to_mu_MAGIC_IRF((fit_func(xdata, params) * np.exp(mtau * alpha)), Ebinsw_Etrue, migmatval, migmaterr, Eest)
+                mu_gam_final_u = mu_gam_u[minbin:maxbin]
+
+            else:
+                mu_gam = dNdE_to_mu_MAGIC((fit_func(xdata, params) * np.exp(mtau * alpha)), Ebinsw_Etrue, migmatval, Eest)
+
             mu_gam_final = mu_gam[minbin:maxbin]
             Non_final = Non[minbin:maxbin] 
             Noff_final = Noff[minbin:maxbin]
-            mu_bg = mu_BG(mu_gam, Non, Noff, Noffregions)
-            mu_bg_final = mu_bg[minbin:maxbin]
             min_num_gauss = 20
-            conditions = [((Non_final >= min_num_gauss) & (Noff_final >= min_num_gauss)), (Non_final == 0.), (Noff_final == 0.), (Non_final != 0.) & (Noff_final != 0.)]
-            choices = [Gauss_logL(Non_final, Noff_final, mu_gam_final, Noffregions), Poisson_logL_Non0(Non_final, Noff_final, mu_gam_final, Noffregions), Poisson_logL_Noff0(Non_final, Noff_final, mu_gam_final, Noffregions), Poisson_logL(Non_final, Noff_final, mu_gam_final, mu_bg_final, Noffregions)]
+
+            if IRF_u:
+                conditions = [((Non_final >= min_num_gauss) & (Noff_final >= min_num_gauss)), #change conditions and choices for irf
+                          (Non_final == 0.), 
+                          (Noff_final == 0.),
+                          (mu_gam_final < 1e-6),
+                          (mu_gam_final_u == 0),
+                          (Non_final != 0.) & (Noff_final != 0.)]
+                choices = [Gauss_logL_IRF(Non_final, Noff_final, mu_gam_final, mu_gam_final_u, Noffregions),
+                           Poisson_logL_Non0_IRF(Non_final, Noff_final, mu_gam_final, mu_gam_final_u, Noffregions),
+                           Poisson_logL_Noff0_IRF(Non_final, Noff_final, mu_gam_final, mu_gam_final_u, Noffregions),
+                           Poisson_logL_small_mugam_IRF(Non_final, Noff_final, mu_gam_final, mu_gam_final_u, Noffregions),
+                           Poisson_logL_noIRF_IRF(Non_final, Noff_final, mu_gam_final, mu_gam_final_u, Noffregions),
+                           Poisson_logL_else_IRF(Non_final, Noff_final, mu_gam_final, mu_gam_final_u, Noffregions)]
+            else:
+                conditions = [((Non_final >= min_num_gauss) & (Noff_final >= min_num_gauss)),
+                          (Non_final == 0.), 
+                          (Noff_final == 0.),
+                          (Non_final != 0.) & (Noff_final != 0.)]
+                choices = [Gauss_logL(Non_final, Noff_final, mu_gam_final, Noffregions),
+                           Poisson_logL_Non0(Non_final, Noff_final, mu_gam_final, Noffregions),
+                           Poisson_logL_Noff0(Non_final, Noff_final, mu_gam_final, Noffregions),
+                           Poisson_logL_else(Non_final, Noff_final, mu_gam_final, Noffregions)]
             res = np.select(conditions, choices, default = 999999999)
             return np.sum(res)
 
@@ -260,6 +286,8 @@ elif Telescope == "MAGIC": #compute values needed for minimization if the select
 
     migrmatrix = uproot.open("/data/magic/users-ifae/rgrau/EBL-splines/fold_migmatrix.root:mig_matrix") #load migration matrix
     migmatval = migrmatrix.values() #m^2 * s #values
+    if IRF_u:
+        migmaterr = migrmatrix.errors()
     migmatxEtrue = migrmatrix.axis("x").edges()/1e3 #TeV #edge values of X axis of the migration matrix (True Energy)
     migmatyEest = migrmatrix.axis("y").edges()/1e3 #TeV #edge values of Y axis of the migration matrix (Estimated Energy)
 
