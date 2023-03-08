@@ -35,7 +35,7 @@ def normal_interp1d(E_before, y_before, E_after):
 def tau_interp(E_after, z_after, EBL_Model, kind_of_interp = "linear"):
     if EBL_Model == "Dominguez":
         possible_z = np.array([0.01, 0.02526316, 0.04052632, 0.05578947, 0.07105263, 0.08631579, 0.10157895, 0.11684211, 0.13210526, 0.14736842, 0.16263158, 0.17789474, 0.19315789, 0.20842105, 0.22368421, 0.23894737, 0.25421053, 0.26947368, 0.28473684, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75])
-        file = np.loadtxt('/home/rgrau/Desktop/EBL-splines/tau_dominguez11.out')#np.loadtxt('/home/rgrau/Desktop/EBL-splines/tau_dominguez11.out')
+        file = np.loadtxt('/nfs/pic.es/user/r/rgrauhar/rgrau/EBL-splines/tau_dominguez11.out')#np.loadtxt('/home/rgrau/Desktop/EBL-splines/tau_dominguez11.out')
         pdfile = pd.DataFrame(file)
         pdfile = pdfile.rename(columns={ 0 : 'E [TeV]', 1: 'tau z=0.01', 2: 'tau z=0.02526316', 3: 'tau z=0.04052632', 4: 'tau z=0.05578947', 5: 'tau z=0.07105263', 6: 'tau z=0.08631579', 7: 'tau z=0.10157895', 8: 'tau z=0.11684211', 9: 'tau z=0.13210526', 10: 'tau z=0.14736842', 11: 'tau z=0.16263158', 12: 'tau z=0.17789474', 13: 'tau z=0.19315789', 14: 'tau z=0.20842105', 15: 'tau z=0.22368421', 16: 'tau z=0.23894737', 17: 'tau z=0.25421053', 18: 'tau z=0.26947368', 19: 'tau z=0.28473684', 20: 'tau z=0.3' , 21: 'tau z=0.35', 22: 'tau z=0.4' , 23: 'tau z=0.45', 24: 'tau z=0.5', 25: 'tau z=0.55', 26: 'tau z=0.6', 27: 'tau z=0.65', 28: 'tau z=0.7' , 29: 'tau z=0.75'})
         E_before = pdfile['E [TeV]'].to_numpy() #energy bins
@@ -315,7 +315,7 @@ def dNdE_to_mu_MAGIC_IRF(dNdEa, Ebinw, migmatval, migmaterr, Eest):
 
 def Poisson_logL_IRF(Non, Noff, mu_gam, delta_mu_gam, mu_bg, Noffregions): #expectedgammas = mu_gam, bckg = Noff/Noffregions, observed = Non
     logL = np.log(poisson.pmf(Non, mu_gam + mu_bg)) + np.log(poisson.pmf(Noff, Noffregions * mu_bg))
-    logLmax = np.log(poisson.pmf(Non, Non)) + np.log10(poisson.pmf(Noff, Noff))
+    logLmax = np.log(poisson.pmf(Non, Non)) + np.log(poisson.pmf(Noff, Noff))
     return -2 * (logL - logLmax)
 
 def Poisson_logL_Non0_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions): #canviat per IRF
@@ -366,8 +366,8 @@ def Gauss_logL_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions): #canviat per I
 
 
 def Poisson_logL(Non, Noff, mu_gam, mu_bg, Noffregions):
-    logL = np.log(poisson.pmf(Non, mu_gam + mu_bg)) + np.log10(poisson.pmf(Noff, Noffregions * mu_bg))
-    logLmax = np.log(poisson.pmf(Non, Non)) + np.log10(poisson.pmf(Noff, Noff))
+    logL = np.log(poisson.pmf(Non, mu_gam + mu_bg)) + np.log(poisson.pmf(Noff, Noffregions * mu_bg))
+    logLmax = np.log(poisson.pmf(Non, Non)) + np.log(poisson.pmf(Noff, Noff))
     return -2 * (logL - logLmax)
 
 def Poisson_logL_Non0(Non, Noff, mu_gam, Noffregions):

@@ -20,7 +20,7 @@ import uproot
 systematics = 0.07
 Emin = 0.06
 Emax = 15.
-Extratxt = "errors_IRF_test"
+Extratxt = "errors_IRF_test_fix"
 #load all config from config file:
 start_time = time.time()
 with open("/data/magic/users-ifae/rgrau/EBL-splines/EBL_fit_config2_1.yml", "r") as f:
