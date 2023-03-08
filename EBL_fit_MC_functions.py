@@ -34,10 +34,10 @@ def normal_interp1d(E_before, y_before, E_after):
 
 def tau_interp(E_after, z_after, EBL_Model, kind_of_interp = "linear"):
     if EBL_Model == "Dominguez":
-        possible_z = np.array([0.01, 0.02526316, 0.04052632, 0.05578947, 0.07105263, 0.08631579, 0.10157895, 0.11684211, 0.13210526, 0.14736842, 0.16263158, 0.17789474, 0.19315789, 0.20842105, 0.22368421, 0.23894737, 0.25421053, 0.26947368, 0.28473684, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75])
-        file = np.loadtxt('/data/magic/users-ifae/rgrau/EBL-splines/tau_dominguez11.out')#np.loadtxt('/home/rgrau/Desktop/EBL-splines/tau_dominguez11.out')
+        possible_z = np.array([0.01, 0.02526316, 0.04052632, 0.05578947, 0.07105263, 0.08631579, 0.10157895, 0.11684211, 0.13210526, 0.14736842, 0.16263158, 0.17789474, 0.19315789, 0.20842105, 0.22368421, 0.23894737, 0.25421053, 0.26947368, 0.28473684, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1., 1.2, 1.4, 1.6, 1.8, 2.])
+        file = np.loadtxt('/home/rgrau/Desktop/EBL-splines/tau_dominguez11.out')#np.loadtxt('/home/rgrau/Desktop/EBL-splines/tau_dominguez11.out')
         pdfile = pd.DataFrame(file)
-        pdfile = pdfile.rename(columns={ 0 : 'E [TeV]', 1: 'tau z=0.01', 2: 'tau z=0.02526316', 3: 'tau z=0.04052632', 4: 'tau z=0.05578947', 5: 'tau z=0.07105263', 6: 'tau z=0.08631579', 7: 'tau z=0.10157895', 8: 'tau z=0.11684211', 9: 'tau z=0.13210526', 10: 'tau z=0.14736842', 11: 'tau z=0.16263158', 12: 'tau z=0.17789474', 13: 'tau z=0.19315789', 14: 'tau z=0.20842105', 15: 'tau z=0.22368421', 16: 'tau z=0.23894737', 17: 'tau z=0.25421053', 18: 'tau z=0.26947368', 19: 'tau z=0.28473684', 20: 'tau z=0.3' , 21: 'tau z=0.35', 22: 'tau z=0.4' , 23: 'tau z=0.45', 24: 'tau z=0.5', 25: 'tau z=0.55', 26: 'tau z=0.6', 27: 'tau z=0.65', 28: 'tau z=0.7' , 29: 'tau z=0.75'})
+        pdfile = pdfile.rename(columns={ 0 : 'E [TeV]', 1: 'tau z=0.01', 2: 'tau z=0.02526316', 3: 'tau z=0.04052632', 4: 'tau z=0.05578947', 5: 'tau z=0.07105263', 6: 'tau z=0.08631579', 7: 'tau z=0.10157895', 8: 'tau z=0.11684211', 9: 'tau z=0.13210526', 10: 'tau z=0.14736842', 11: 'tau z=0.16263158', 12: 'tau z=0.17789474', 13: 'tau z=0.19315789', 14: 'tau z=0.20842105', 15: 'tau z=0.22368421', 16: 'tau z=0.23894737', 17: 'tau z=0.25421053', 18: 'tau z=0.26947368', 19: 'tau z=0.28473684', 20: 'tau z=0.3' , 21: 'tau z=0.35', 22: 'tau z=0.4' , 23: 'tau z=0.45', 24: 'tau z=0.5', 25: 'tau z=0.55', 26: 'tau z=0.6', 27: 'tau z=0.65', 28: 'tau z=0.7' , 29: 'tau z=0.75', 30: 'tau z=0.8', 31: 'tau z=0.85', 32: 'tau z=0.9', 33: 'tau z=0.95', 34: 'tau z=1.0', 35: 'tau z=1.2', 36: 'tau z=1.4', 37: 'tau z=1.6', 38: 'tau z=1.8', 39: 'tau z=2.0'})
         E_before = pdfile['E [TeV]'].to_numpy() #energy bins
         tau_matrix = np.zeros([len(possible_z), len(E_before)])
         for i in range(len(possible_z)):
@@ -275,8 +275,8 @@ def dNdE_to_mu_MAGIC(dNdEa, Ebinw, migmatval, Eest):
 
 def Poisson_logL(Non, Noff, mu_gam, mu_bg, Nwobbles):
     # print(Non, Noff, mu_gam, mu_bg)
-    logL = np.log(poisson.pmf(Non, mu_gam + mu_bg) * poisson.pmf(Noff, Nwobbles * mu_bg)) #change this to sum of logs.(and maybie add gaussian)
-    logLmax = np.log(poisson.pmf(Non, Non) * poisson.pmf(Noff, Noff))
+    logL = np.log(poisson.pmf(Non, mu_gam + mu_bg)) + np.log(poisson.pmf(Noff, Nwobbles * mu_bg)) #change this to sum of logs.(and maybie add gaussian)
+    logLmax = np.log(poisson.pmf(Non, Non)) + np.log(poisson.pmf(Noff, Noff))
     return -2 * (logL - logLmax)
 
 def Poisson_logL_Non0(Non, Noff, mu_gam, Nwobbles):
