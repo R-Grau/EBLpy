@@ -114,7 +114,6 @@ if Forward_folding:
                            Poisson_logL_Non0(Non_final, Noff_final, mu_gam_final, Noffregions),
                            Poisson_logL_Noff0(Non_final, Noff_final, mu_gam_final, Noffregions),
                            Poisson_logL_else(Non_final, Noff_final, mu_gam_final, Noffregions)]
-                
             res = np.select(conditions, choices, default = 999999999)
             return np.sum(res)
 
