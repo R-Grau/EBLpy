@@ -1,0 +1,445 @@
+import numpy as np
+import scipy.interpolate as interpolate
+from scipy.integrate import quad
+from scipy.stats import poisson
+import pandas as pd
+import yaml
+
+pathstring = "/home/rgrau/Desktop/EBL_pic_sync/" #"/data/magic/users-ifae/rgrau/EBL-splines/"
+
+def general_config():
+    with open("{0}EBL_MC_general_config.yml".format(pathstring), "r") as f:
+        inp_config = yaml.safe_load(f)
+    niter = inp_config["niter"]
+    Energy_migration = inp_config["Energy_migration"]
+    Forward_folding = inp_config["Forward_folding"]
+    IRF_u = inp_config["IRF_u"]    
+    Background = inp_config["Background"]
+    fit_func_name = inp_config["fit_func_name"]
+    Spectrum_func_name = inp_config["Spectrum_func_name"]
+    Telescope = inp_config["Telescope"]
+    return Telescope, niter, Energy_migration, Forward_folding, IRF_u, Background, fit_func_name, Spectrum_func_name
+    
+#load all config from config file:
+def config_data(Spectrum_func_name):
+    with open("{0}EBL_MC_config_data_{1}.yml".format(pathstring, Spectrum_func_name), "r") as f:
+        inp_config = yaml.safe_load(f)
+    #fit_func_name = inp_config["fit_func_name"]
+    
+    #Spectrum_func_name = inp_config["Spectrum_func_name"]
+    EBL_Model = inp_config["EBL_Model"]
+    Source_flux = inp_config["Source_flux"]
+    Observation_time = inp_config["Observation_time"]
+    Background_scale = inp_config["Background_scale"]
+    Norm = inp_config["Norm"]
+    Ph_index = inp_config["Ph_index"]
+    LP_curvature = inp_config["LP_curvature"]
+    Source_z = inp_config["Source_z"]
+    return Source_flux, Observation_time, Background_scale, Norm, Ph_index, LP_curvature, Source_z, EBL_Model
+
+ 
+def config_fit(fit_func_name):
+    with open("{0}EBL_MC_config_fit_{1}.yml".format(pathstring, fit_func_name), "r") as f:
+        inp_config = yaml.safe_load(f)
+    EBL_Model = inp_config["EBL_Model"]
+    initial_guess_0 = inp_config["initial_guess_0"]
+    initial_guess_pos = inp_config["initial_guess_pos"]
+    step = inp_config["step"]
+    last_bin = inp_config["last_bin"]
+    first_bin = inp_config["first_bin"]
+    Source_z = inp_config["Source_z"]
+    
+    if fit_func_name == "MBPWL":
+        knots = inp_config["knots"]
+        Efirst = inp_config["Efirst"]
+        DeltaE = inp_config["DeltaE"]
+    else:
+        knots = 2
+        Efirst = 0.11
+        DeltaE = 0.306
+
+    return EBL_Model, initial_guess_0, initial_guess_pos, step, last_bin, first_bin, knots, Efirst, DeltaE, Source_z
+
+def chisq(obs, exp, error):
+    return np.sum(np.square(obs - exp) / np.square(error))
+    
+def Gauss(E, A, mu, sigma):
+    return A * (np.exp(-1/2 * np.square((E - mu) / sigma)) / (sigma * np.sqrt(2*np.pi)))
+
+def Gauss_int(A, mu, sigma, Em, Ep):
+    return quad(Gauss, Em, Ep, args=(A, mu, sigma)) #maybie some mistake here because of log scale
+
+
+def log_interp1d(E_before, y_before, E_after):
+    interp_func = interpolate.interp1d(np.log10(E_before), np.log10(y_before), bounds_error=False, fill_value = "extrapolate", kind='linear')
+    interpolated = np.power(10 ,interp_func(np.log10(E_after)))
+    return interpolated
+
+def log_interp1d2(xx, yy):
+    logx = np.log10(xx)
+    logy = np.log10(yy)
+    interp = interpolate.interp1d(logx, logy, fill_value='extrapolate', kind='slinear')
+    log_interp = lambda zz: np.power(10.0, interp(np.log10(zz)))
+    return log_interp
+
+
+def normal_interp1d(E_before, y_before, E_after):
+    interp_func = interpolate.interp1d(E_before, y_before, bounds_error=False, fill_value = "extrapolate", kind='linear')
+    interpolated = interp_func(E_after)
+    return interpolated
+
+def tau_interp(E_after, z_after, EBL_Model, kind_of_interp = "linear"):
+    if EBL_Model == "Dominguez":
+
+        possible_z = np.array([0.01, 0.02526316, 0.04052632, 0.05578947, 0.07105263, 0.08631579, 0.10157895, 0.11684211, 0.13210526, 0.14736842, 0.16263158, 0.17789474, 0.19315789, 0.20842105, 0.22368421, 0.23894737, 0.25421053, 0.26947368, 0.28473684, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1., 1.2, 1.4, 1.6, 1.8, 2.])
+        file = np.loadtxt('{0}tau_dominguez11.out'.format(pathstring))#np.loadtxt('/home/rgrau/Desktop/EBL-splines/tau_dominguez11.out')
+
+        pdfile = pd.DataFrame(file)
+        pdfile = pdfile.rename(columns={ 0 : 'E [TeV]', 1: 'tau z=0.01', 2: 'tau z=0.02526316', 3: 'tau z=0.04052632', 4: 'tau z=0.05578947', 5: 'tau z=0.07105263', 6: 'tau z=0.08631579', 7: 'tau z=0.10157895', 8: 'tau z=0.11684211', 9: 'tau z=0.13210526', 10: 'tau z=0.14736842', 11: 'tau z=0.16263158', 12: 'tau z=0.17789474', 13: 'tau z=0.19315789', 14: 'tau z=0.20842105', 15: 'tau z=0.22368421', 16: 'tau z=0.23894737', 17: 'tau z=0.25421053', 18: 'tau z=0.26947368', 19: 'tau z=0.28473684', 20: 'tau z=0.3' , 21: 'tau z=0.35', 22: 'tau z=0.4' , 23: 'tau z=0.45', 24: 'tau z=0.5', 25: 'tau z=0.55', 26: 'tau z=0.6', 27: 'tau z=0.65', 28: 'tau z=0.7' , 29: 'tau z=0.75', 30: 'tau z=0.8', 31: 'tau z=0.85', 32: 'tau z=0.9', 33: 'tau z=0.95', 34: 'tau z=1.0', 35: 'tau z=1.2', 36: 'tau z=1.4', 37: 'tau z=1.6', 38: 'tau z=1.8', 39: 'tau z=2.0'})
+        E_before = pdfile['E [TeV]'].to_numpy() #energy bins
+        tau_matrix = np.zeros([len(possible_z), len(E_before)])
+        for i in range(len(possible_z)):
+            tau_matrix[i] = pdfile['tau z={0}'.format(possible_z[i])].to_numpy() #tau bins
+    else:
+        raise Exception('The EBL model "{func}" has not been implemented.'.format(func = EBL_Model))        
+
+    if kind_of_interp == "linear":
+        interpolation = interpolate.interp2d(E_before, possible_z, tau_matrix)
+        tau_new = interpolation(E_after, z_after)
+    elif kind_of_interp == "log":
+        log_interpolation = interpolate.interp2d(np.log10(E_before), np.log10(possible_z), np.log10(tau_matrix))
+        tau_new = np.power(10, log_interpolation(np.log10(E_after), np.log10(z_after)))
+
+    return(tau_new)
+
+def SED_gen(rng_num, bckgmu, mu_vec, Effa, Ebinsw, Observation_time, E, Noffregions):
+    my_generator = np.random.default_rng(rng_num)
+    Simbckg1 = my_generator.poisson(bckgmu)
+    # Simbckg1 = Simbckg1.astype(float)
+    # for i in range(len(Simbckg1)):
+    #     if Simbckg1[i] == 0:
+    #         Simbckg1[i] = bckgmu[i]
+    Simbckg1_u = np.sqrt(Simbckg1)
+    Simbckg5 = my_generator.poisson(Noffregions*bckgmu)/Noffregions
+    # Simbckg5 = Simbckg5.astype(float)
+    # for i in range(len(Simbckg5)):
+    #     if Simbckg5[i] == 0:
+    #         Simbckg5[i] = bckgmu[i]
+    Simbckg5_u = np.sqrt(Simbckg5)
+
+    N = my_generator.poisson(mu_vec)
+    # N[N==0] = 1
+    N_u = np.sqrt(N)
+
+    NpB = N + Simbckg1 - Simbckg5
+    NpB_u = np.sqrt(N_u**2 + Simbckg1_u**2 + Simbckg5_u**2)
+    NpB_u[NpB_u == 0] = 1
+
+
+    dNdE_b = NpB / Effa / Ebinsw / Observation_time
+    dNdE_b_u = NpB_u / Effa / Ebinsw / Observation_time
+
+    SED = np.square(E) * dNdE_b
+    SED_u = np.square(E) * dNdE_b_u
+    return SED, SED_u, dNdE_b, dNdE_b_u
+
+def fit_func_select(fit_func_name, knots = 3, Efirst = 0.2 , DeltaE = 1.12):
+    if fit_func_name == "MBPWL":
+        def fit_func(xdata, params):
+            if knots == 1:
+                polw = np.zeros(len(xdata))
+                gamma = np.zeros(knots+1)
+                phi = np.zeros(knots+1)
+                phi_0 = params[0] #len(sqrtdelta_lam) = len(lam)-1 = len(phi)-1
+                gamma0 = params[1]
+                sqrtdelta_gamma = params[2:knots+2]
+                Eknot = Eknot
+                delta_gamma = np.square(sqrtdelta_gamma)
+                gamma[0] = gamma0
+                phi[0] = phi_0
+                gamma[1] = gamma[0] + delta_gamma[0]
+                phi[1] = phi[0] * (Eknot/0.25) ** delta_gamma[0]
+                for i in range(len(xdata)):
+                    if xdata[i] < Eknot:
+                        polw[i] = phi[0] * (xdata[i]/0.25) ** (-gamma[0])
+                    elif xdata[i] >= Eknot:
+                        polw[i] = phi[1] * (xdata[i]/0.25) ** (-gamma[1])
+                return polw
+            else:
+                polw = np.zeros(len(xdata))
+
+                gamma = np.zeros(knots+1)
+                phi = np.zeros(knots+1)
+                phi_0 = params[0] #len(sqrtdelta_lam) = len(lam)-1 = len(phi)-1
+                gamma0 = params[1]
+                sqrtdelta_gamma = params[2:knots+2]
+                Elast = Efirst + DeltaE
+                Ebr = np.geomspace(Efirst, Elast, knots)
+                delta_gamma = np.square(sqrtdelta_gamma)
+                gamma[0] = gamma0
+                phi[0] = phi_0
+                for i in range(knots):
+                    gamma[i+1] = gamma[i] + delta_gamma[i]
+                    phi[i+1] = phi[i] * (Ebr[i]/0.25) ** delta_gamma[i]
+                for i in range(len(xdata)):
+                    for j in range(knots):
+                        if xdata[i]<Ebr[0]:
+                            polw[i] = phi[0] * (xdata[i]/0.25) ** (-gamma[0])
+                        elif Ebr[-1] < xdata[i]:
+                            polw[i] = phi[-1] * (xdata[i]/0.25) ** (-gamma[-1])
+                        elif Ebr[j] <= xdata[i] < Ebr[j+1]:
+                            polw[i] = phi[j+1] * (xdata[i]/0.25) ** (-gamma[j+1])
+                return polw
+        return(fit_func)
+
+    elif fit_func_name == "PWL":
+        def fit_func(xdata, params):
+            phi = params[0]
+            gamma = params [1]
+            PLW = phi / ((xdata/0.25) ** gamma)
+            return PLW
+        return(fit_func)
+
+    elif fit_func_name == "LP":
+        def fit_func(xdata, params):
+            phi0 = params[0]
+            alpha = params[1]
+            beta = params[2]
+            #Enorm = 1TeV  # (it is 0.25 TeV set by default) if it is 1 TeV no need ot include it (if it is different, need to add it to te LP function)
+            LP = phi0 * np.power((xdata/0.25), (-alpha - beta * beta * np.log(xdata/0.25)))
+            return LP
+        return(fit_func)
+
+    elif fit_func_name == "freeLP":
+        def fit_func(xdata, params):
+            phi0 = params[0]
+            alpha = params[1]
+            beta = params[2]
+            #Enorm = 1TeV #if it is 1 TeV no need ot include it (if it is different, need to add it to te LP function)
+            freeLP = phi0 * np.power((xdata/0.25), (-alpha - beta * abs(beta) * np.log(xdata/0.25)))
+            return freeLP
+        return(fit_func)
+
+    else:
+        raise Exception('The function "{func}" has not been implemented.'.format(func = fit_func_name))
+
+def alphas_creation(initial_guess_pos, first_bin, last_bin, step):
+    alphas1 = np.arange(initial_guess_pos + step, last_bin + step, step)
+    alphas2 = np.arange(initial_guess_pos, first_bin - step, -step)
+    alphas = np.append(alphas1, alphas2)
+    return alphas    
+
+def ig_mat_create(fit_func_name, alphas, knots):
+    if fit_func_name == "MBPWL":
+        initial_guess_mat = np.zeros((len(alphas)+1, knots+2))
+    elif fit_func_name == "PWL":
+        initial_guess_mat = np.zeros((len(alphas)+1, 2))
+    elif fit_func_name == "LP" or fit_func_name == "freeLP":
+        initial_guess_mat = np.zeros((len(alphas)+1, 3))
+    return initial_guess_mat
+
+def SED_alpha(alpha, dNdE_b, dNdE_b_u, tau, E_final):
+    dNdE2 = dNdE_b * np.exp(alpha*tau)
+    dNdE2_u = dNdE_b_u * np.exp(alpha*tau)
+    SED = np.square(E_final) * dNdE2
+    SED_u = np.square(E_final) * dNdE2_u
+    return SED, SED_u
+
+def sigma_intervals(sigma, chis_new, step, interpx):
+    sigma_inter = np.where(chis_new <= sigma**2 + np.min(chis_new))
+    upper_bound = step/5 * np.max(sigma_inter)
+    lower_bound = step/5 * np.min(sigma_inter)
+    if sigma == 1:
+        print("The minimum is at alpha = ", interpx[np.argmin(chis_new)], " + ", upper_bound-interpx[np.argmin(chis_new)], " - ", interpx[np.argmin(chis_new)] - lower_bound)
+    else:
+        print("The {sigma} sigma interval is at alpha = ".format(sigma = sigma), interpx[np.argmin(chis_new)], " + ", upper_bound-interpx[np.argmin(chis_new)], " - ", interpx[np.argmin(chis_new)] - lower_bound)
+ 
+def ordering_sigma(alphas, first_bin, last_bin, step, chisqs):
+    order = np.argsort(alphas)
+    interpx = np.arange(first_bin, last_bin, step/5)
+    alphas_reord = np.take_along_axis(alphas, order, axis=0)
+    chisqs_reord = np.take_along_axis(np.array(chisqs), order, axis=0)
+    f1 = interpolate.interp1d(alphas_reord, chisqs_reord, kind='linear')
+    chis_new = f1(interpx)
+    sigma_intervals(1, chis_new, step, interpx)
+    sigma_intervals(2, chis_new, step, interpx)
+    sigma_intervals(3, chis_new, step, interpx)
+
+def on_off_rnd(rng_num, bckgmu, mu_vec, Noffregions):
+    my_generator = np.random.default_rng(rng_num)
+    Simbckg1 = my_generator.poisson(bckgmu)
+    Simbckg_wob = my_generator.poisson(Noffregions*bckgmu)/Noffregions
+    N = my_generator.poisson(mu_vec)
+
+    ON = N + Simbckg1
+    OFF = Simbckg_wob
+
+    return ON, OFF
+
+def SED_gen_nobckg(rng_num, mu_vec, Effa, Ebinsw, Observation_time, E):
+    my_generator = np.random.default_rng(rng_num)
+    NpB = my_generator.poisson(mu_vec)
+    NpB_u = np.sqrt(NpB)
+    NpB_u[NpB_u == 0] = 1
+
+    dNdE_b = NpB / Effa / Ebinsw / Observation_time
+    dNdE_b_u = NpB_u / Effa / Ebinsw / Observation_time
+
+    SED = np.square(E) * dNdE_b
+    SED_u = np.square(E) * dNdE_b_u
+    return SED, SED_u, dNdE_b, dNdE_b_u
+
+def mu_BG(mu_g, Non, Noff, Noffregions):
+    mubg = ((-(Noffregions+1) * mu_g) + Non + Noff + np.sqrt(np.square(((Noffregions+1) * mu_g) - Non - Noff) + (4*(Noffregions+1) * Noff * mu_g)))/(2*(Noffregions+1))
+    return mubg
+
+# def N_rnd(rng_num, mu):
+#     my_generator = np.random.default_rng(rng_num)
+#     N = my_generator.poisson(mu)
+#     return N
+
+def FF_Likelihood(Non, Noff, mu_gamma, mu_bg, Noffregions):
+    mu_on = mu_gamma + mu_bg
+    mu_off = mu_bg * Noffregions
+    L = np.sum(poisson.pmf(k = Non, mu = mu_on) * poisson.pmf(k = Noff, mu = mu_off))
+    return L
+
+def dNdE_to_mu(dNdEa, Effa_reb, Ebinsw, Observation_time, Ebins, Eres_reb2, E_EBL):
+    mu_vec = dNdEa * Effa_reb * Ebinsw * Observation_time
+
+    mu_vec_reco = np.zeros(len(mu_vec))
+    mu_vec_i = np.zeros(len(mu_vec))
+
+    for i in range(len(mu_vec)):
+        for j in range(len(mu_vec)):
+            A = mu_vec[i]
+            Em = Ebins[j]
+            Ep = Ebins[j+1]
+            sigma = Eres_reb2[i]
+            mu = E_EBL[i]
+
+            mu_vec_i[j] = Gauss_int(A, mu, sigma, Em, Ep)[0]
+        mu_vec_reco = mu_vec_reco + mu_vec_i
+     
+    return mu_vec_reco
+
+def dNdE_to_mu_MAGIC(dNdEa, Ebinw, migmatval, Eest):
+    mu_vec = dNdEa * Ebinw
+    mu_vec_reco = np.zeros(len(Eest))
+    for i in range(len(Eest)):
+        mu_vec_reco[i] = np.sum(mu_vec * migmatval[:,i])
+    return mu_vec_reco
+
+def best_mubg_mugam_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
+    def mu_gam_f(eps, mu_gam, delta_mu_gam):
+        return mu_gam + eps * delta_mu_gam
+    def mu_BG_2_deq(alpha, Noff, Non, mu_gam):
+        a = alpha + 1
+        b = (1 + alpha) * mu_gam - alpha * (Non + Noff)
+        c = -alpha * Noff * mu_gam
+        mubg = (-b + np.sqrt(np.square(b) - 4 * a * c)) / (2. * a)
+        return mubg
+    
+    fAlpha = 1/Noffregions
+    a = -fAlpha
+    b = delta_mu_gam * (1 - fAlpha) - mu_gam/delta_mu_gam * fAlpha
+    c = fAlpha * (Non + Noff) + np.square(delta_mu_gam) + mu_gam * (1 - fAlpha)
+    d = delta_mu_gam * (mu_gam + fAlpha * Noff - Non)
+    epsilon = np.roots([a, b, c, d])
+    epsilon2 = np.real(epsilon[np.isreal(epsilon)])
+    chi2proxy = np.zeros(len(epsilon2))
+    mu_gam2 = np.zeros(len(epsilon2))
+    mu_bg2 = np.zeros(len(epsilon2))
+    for i, eps in enumerate(epsilon2):
+        mu_gam2[i] = mu_gam_f(eps, mu_gam, delta_mu_gam)
+        mu_bg2[i] = mu_BG_2_deq(fAlpha, Noff, Non, mu_gam2[i])
+        chi2proxy[i] = -2*(np.log(poisson.pmf(Non, mu_bg2[i]+mu_gam2[i])) + np.log(poisson.pmf(Noff, mu_bg2[i]/fAlpha)) - 0.5*eps*eps)
+    best_mugam, best_mubg = mu_gam2[np.argmin(chi2proxy)], mu_bg2[np.argmin(chi2proxy)]
+    return best_mugam, best_mubg
+
+def dNdE_to_mu_MAGIC_IRF(dNdEa, Ebinw, migmatval, migmaterr, Eest):
+    mu_vec = dNdEa * Ebinw
+    mu_vec_reco = np.zeros(len(Eest))
+    mu_vec_reco_u = np.zeros(len(Eest))
+    for i in range(len(Eest)):
+        mu_vec_reco[i] = np.sum(mu_vec * migmatval[:,i])
+        mu_vec_reco_u[i] = np.sqrt(np.sum(mu_vec * migmaterr[:,i])) #as mu_vec_u = 0
+    return mu_vec_reco, mu_vec_reco_u
+
+def Poisson_logL_IRF(Non, Noff, mu_gam, delta_mu_gam, mu_bg, Noffregions): #expectedgammas = mu_gam, bckg = Noff/Noffregions, observed = Non
+    logL = np.log(poisson.pmf(Non, mu_gam + mu_bg)) + np.log(poisson.pmf(Noff, Noffregions * mu_bg))
+    logLmax = np.log(poisson.pmf(Non, Non)) + np.log(poisson.pmf(Noff, Noff))
+    return -2 * (logL - logLmax)
+
+def Poisson_logL_Non0_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions): #canviat per IRF
+    mu_bg = Noff / (1. + Noffregions)
+    mu_gam2 = -np.square(delta_mu_gam) + mu_gam
+    if mu_gam2 < 0.:#FIXME?
+        mu_gam2 = 0
+    return Poisson_logL_IRF(Non, Noff, mu_gam2, delta_mu_gam, mu_bg, Noffregions)
+
+def Poisson_logL_Noff0_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
+    fAlpha = 1/Noffregions
+    mu_bg = fAlpha * Non / (1 + fAlpha) - mu_gam -np.square(delta_mu_gam)/fAlpha
+    if mu_bg < 0.:
+        mu_bg = 0
+        a = 1.
+        b = -mu_gam + np.square(delta_mu_gam)
+        c = -Non + np.square(delta_mu_gam)
+        mu_gam2 = (-b + np.sqrt(np.square(b) - 4 * a * c)) / (2. * a)
+    else:
+        mu_gam2 = mu_gam + np.square(delta_mu_gam) / fAlpha
+    return Poisson_logL_IRF(Non, Noff, mu_gam2, delta_mu_gam, mu_bg, Noffregions)
+
+def Poisson_logL_small_mugam_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
+    fAlpha = 1/Noffregions
+    mu_bg = fAlpha * (Noff + Non) / (1+fAlpha)
+    return Poisson_logL_IRF(Non, Noff, mu_gam, delta_mu_gam, mu_bg, Noffregions)
+
+def Poisson_logL_noIRF_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
+    return Poisson_logL_else(Non, Noff, mu_gam, Noffregions)
+
+def Poisson_logL_else_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
+    mu_gam2, mu_bg = best_mubg_mugam_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions)
+    if mu_gam2 < 0.:
+        mu_gam2 = 0
+        mu_bg = (Non + Noff)/ (1 + Noffregions)
+    return Poisson_logL_IRF(Non, Noff, mu_gam, delta_mu_gam, mu_bg, Noffregions)
+
+
+def Gauss_logL_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions): #canviat per IRF
+    Noff_n = Noff/Noffregions #Noff_n_unc = np.sqrt(Noff_n) but as we have to ^2 later we just don't define it. (same for Non_u)
+    diff = Non - Noff_n - mu_gam
+    delta_exp = np.sqrt(np.square(delta_mu_gam) + Noff_n)
+    delta_diff = np.sqrt(Non + np.square(delta_exp)) 
+    return np.square(diff)/np.square(delta_diff)
+
+
+def Poisson_logL(Non, Noff, mu_gam, mu_bg, Noffregions):
+    logL = np.log(poisson.pmf(Non, mu_gam + mu_bg)) + np.log(poisson.pmf(Noff, Noffregions * mu_bg))
+    logLmax = np.log(poisson.pmf(Non, Non)) + np.log(poisson.pmf(Noff, Noff))
+    return -2 * (logL - logLmax)
+
+def Poisson_logL_Non0(Non, Noff, mu_gam, Noffregions):
+    mu_bg = Noff / (1. + Noffregions)
+    return Poisson_logL(Non, Noff, mu_gam, mu_bg, Noffregions)
+
+def Poisson_logL_Noff0(Non, Noff, mu_gam, Noffregions):
+    fAlpha = 1/Noffregions
+    mu_bg = fAlpha * Non / (1 + fAlpha) - mu_gam
+    if mu_bg < 0.:
+        mu_bg = 0
+    return Poisson_logL(Non, Noff, mu_gam, mu_bg, Noffregions)
+
+def Poisson_logL_else(Non, Noff, mu_gam, Noffregions):
+    mu_bg = mu_BG(mu_gam, Non, Noff, Noffregions)
+    return Poisson_logL(Non, Noff, mu_gam, mu_bg, Noffregions)
+
+def Gauss_logL(Non, Noff, mu_gam, Noffregions):
+    diff = Non - Noff/Noffregions - mu_gam
+    delta_diff = np.sqrt(Non + Noff/Noffregions) 
+    return np.square(diff)/np.square(delta_diff)
+
+def find_z(possible_z, source_z):
+    idx = np.argmin(np.abs(possible_z - source_z))
+    return possible_z[idx]
