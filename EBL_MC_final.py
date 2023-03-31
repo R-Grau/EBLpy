@@ -20,8 +20,9 @@ import uproot
 systematics = 0.07
 Emin = 0.06
 Emax = 15.
-Extratxt = "final_test_opt"
-pathstring = "/home/rgrau/Desktop/EBL_pic_sync/"#"/data/magic/users-ifae/rgrau/EBL-splines/"
+Chain_guess = True
+Extratxt = "FINAL"
+pathstring = "/data/magic/users-ifae/rgrau/EBL-splines/"#"/home/rgrau/Desktop/EBL_pic_sync/"#"/data/magic/users-ifae/rgrau/EBL-splines/"
 
 #Load the general configuration file
 
@@ -90,6 +91,9 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
                 #             Poisson_logL_Noff0(Non_final, Noff_final, mu_gam_final, Noffregions),
                 #             Poisson_logL_else(Non_final, Noff_final, mu_gam_final, Noffregions)]
                 # res = np.select(conditions, choices, default = 999999999)
+                
+            #####NEW optimized way of doing this###########
+
                 res = np.ones(len(Non_final)) * 999999999
                 for i in range(len(Non_final)):
                     if IRF_u:
@@ -132,9 +136,22 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
             elif fit_func_name == "PWL":
                 m.limits = ([(1e-7,1e-3), (None, None)])
                 errors = [1e-7, 0.01]
-            else:
+            elif fit_func_name == "LP" or fit_func_name == "freeLP":
                 m.limits = ([(1e-7, 1e-3), (-2., None), (None, None)])
                 errors = [1e-7, 0.01, 0.01]
+            elif fit_func_name == "EPWL":
+                m.limits = ([(1e-7, 1e-3), (None, None), (None, None)])
+                errors = [1e-8, 1.0, np.sqrt(500.)]
+            elif fit_func_name == "ELP":
+                m.limits = ([(1e-7, 1e-3), (-2., None), (None, None), (None, None)])
+                errors = [1e-8, 1., 0.1, np.sqrt(500.)]
+            elif fit_func_name == "SEPWL":
+                m.limits = ([(1e-7, 1e-3), (None, None), (None, None), (None, None)])
+                errors = [1e-8, 1.0, np.sqrt(500.), 1.]
+            elif fit_func_name == "SELP":
+                m.limits = ([(1e-7, 1e-3), (-2., None), (None, None), (None, None), (None, None)])
+                errors = [1e-8, 1., 0.1, np.sqrt(500.), 0.1]
+            #TODO ADD other functions
             #m.tol = 1e-6
             #m.strategy = 2
             m.errors = errors
@@ -191,6 +208,7 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
     iter = int(sys.argv[1])
         
     for fit_func_name in fit_n: #loop over the different fit functions
+        print("Starting function {func} for iter {iter}".format(func = fit_func_name, iter = iter))
         EBL_Model, initial_guess_0, initial_guess_pos, step, last_bin, first_bin, knots, Efirst, DeltaE, Source_z = config_fit(fit_func_name)
         fit_func = fit_func_select(fit_func_name, knots, Efirst, DeltaE) #define the fit function for the minimization
 
@@ -213,14 +231,6 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
             if Background != True:
                 print("The forward folding is done with background")
 
-            def process(alpha0): #this is not used, will have to delete it
-                global alpha
-                alpha = alpha0   
-                things = fit(initial_guess = initial_guess_0)
-                if things.valid == False:
-                    raise Warning("The minimum is not valid")
-                return m2LogL(things.values)
-
             def process2(iter_num, alphas, mu_on, mu_off):
                 chisqs = []
                 global alpha, Non, Noff
@@ -229,21 +239,37 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
                 my_generator = np.random.default_rng(rng_num)
                 Non, Noff = my_generator.poisson(mu_on), my_generator.poisson(Noffregions * mu_off)
                 Non_u, Noff_u = np.sqrt(Non), np.sqrt(Noff)
-                things = fit(initial_guess=initial_guess_0)
-                initial_guess_mat = ig_mat_create(fit_func_name, alphas, knots)
-                initial_guess_mat[0] = things.values
-                for i, alpha0 in enumerate(alphas):
-                    alpha = alpha0
-                    initial_guess = initial_guess_mat[i]
-                    if alpha == initial_guess_pos:
-                        initial_guess = initial_guess_mat[0]
-                    things = fit(initial_guess = initial_guess)
-                    if things.valid == False:
-                        raise Warning("The minimum is not valid")
-                    if i < len(alphas):
-                        initial_guess_mat[i+1] = things.values
-                    chi2 = m2LogL(things.values)
-                    chisqs.append(chi2)
+                if Chain_guess:
+                    things = fit(initial_guess=initial_guess_0)
+                    initial_guess_mat = ig_mat_create(fit_func_name, alphas, knots)
+                    initial_guess_mat[0] = things.values
+                    for i, alpha0 in enumerate(alphas):
+                        alpha = alpha0
+                        initial_guess = initial_guess_mat[i]
+                        if alpha == initial_guess_pos:
+                            initial_guess = initial_guess_mat[0]
+                        things = fit(initial_guess = initial_guess)
+                        if things.valid == False:
+                            print("Function {0} did not minimize properly the {1} intrinsic spectra for iteration {2}".format(fit_func_name, Spectrum_func_name, iter))
+                            break
+                            #print("Function {0} minimized properly the {1} intrinsic spectra for iteration {2}".format(fit_func_name, Spectrum_func_name, iter))
+                        
+                        if i < len(alphas):
+                            initial_guess_mat[i+1] = things.values
+                        chi2 = m2LogL(things.values)
+                        chisqs.append(chi2)
+                else:
+                    for i, alpha0 in enumerate(alphas):
+                        alpha = alpha0
+                        things = fit(initial_guess = initial_guess_0)
+                        if things.valid == False:
+                            print("Function {0} did not minimize properly the {1} intrinsic spectra for iteration {2}".format(fit_func_name, Spectrum_func_name, iter))
+                            break
+                        chi2 = m2LogL(things.values)
+                        chisqs.append(chi2)
+
+                print("Function {0} minimized properly the {1} intrinsic spectra for iteration {2}".format(fit_func_name, Spectrum_func_name, iter))
+
                 return chisqs
 
             alphas = alphas_creation(initial_guess_pos, first_bin, last_bin, step)
@@ -256,7 +282,10 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
             mu_off = bckgmu_final 
 
             chisqs = process2(iter, alphas, mu_on, mu_off)
-
+            if len(chisqs) != len(alphas):
+                continue
+            if np.isnan(chisqs).any():
+                continue
             dset = savefile.create_dataset("alphas", data = alphas, dtype='float')
             dset = savefile.create_dataset("chisqs", data = chisqs, dtype='float')
 

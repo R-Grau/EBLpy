@@ -5,7 +5,7 @@ from scipy.stats import poisson
 import pandas as pd
 import yaml
 
-pathstring = "/home/rgrau/Desktop/EBL_pic_sync/" #"/data/magic/users-ifae/rgrau/EBL-splines/"
+pathstring = "/data/magic/users-ifae/rgrau/EBL-splines/"#"/home/rgrau/Desktop/EBL_pic_sync/"#"/data/magic/users-ifae/rgrau/EBL-splines/"
 
 def general_config():
     with open("{0}EBL_MC_general_config.yml".format(pathstring), "r") as f:
@@ -219,6 +219,47 @@ def fit_func_select(fit_func_name, knots = 3, Efirst = 0.2 , DeltaE = 1.12):
             freeLP = phi0 * np.power((xdata/0.25), (-alpha - beta * abs(beta) * np.log(xdata/0.25)))
             return freeLP
         return(fit_func)
+    
+    elif fit_func_name == "EPWL":
+        def fit_func(xdata, params):
+            phi = params[0]
+            gamma = params[1]
+            c = params[2]
+            EPWL = phi / ((xdata/0.249) ** gamma) * np.exp(-xdata / (c * c))
+            return EPWL
+        return fit_func
+    
+    elif fit_func_name == "ELP":
+        def fit_func(xdata, params):
+            phi0 = params[0]
+            alpha = params[1]
+            beta = params[2]
+            c = params[3]
+            ELP = phi0 * np.power((xdata/0.249), (-alpha - beta * beta * np.log10(xdata/0.249))) * np.exp(-xdata / (c * c))
+            return ELP
+        return fit_func
+        
+    elif fit_func_name == "SEPWL":
+        def fit_func(xdata, params):
+            phi = params[0]
+            gamma = params[1]
+            c = params[2]
+            d = params[3]
+            SEPWL = phi / ((xdata/0.249) ** gamma) * np.exp(-np.power(xdata / (c * c), d))
+            return SEPWL
+        return fit_func
+    
+    elif fit_func_name == "SELP":
+        def fit_func(xdata, params):
+            phi0 = params[0]
+            alpha = params[1]
+            beta = params[2]
+            c = params[3]
+            d = params[4]
+            SELP = phi0 * np.power((xdata/0.249), (-alpha - beta * beta * np.log10(xdata/0.249))) * np.exp(-np.power(xdata / (c * c), d))
+            return SELP
+        return fit_func
+
 
     else:
         raise Exception('The function "{func}" has not been implemented.'.format(func = fit_func_name))
@@ -236,6 +277,14 @@ def ig_mat_create(fit_func_name, alphas, knots):
         initial_guess_mat = np.zeros((len(alphas)+1, 2))
     elif fit_func_name == "LP" or fit_func_name == "freeLP":
         initial_guess_mat = np.zeros((len(alphas)+1, 3))
+    elif fit_func_name == "EPWL":
+        initial_guess_mat = np.zeros((len(alphas)+1, 3))
+    elif fit_func_name == "ELP":
+        initial_guess_mat = np.zeros((len(alphas)+1, 4))
+    elif fit_func_name == "SEPWL":
+        initial_guess_mat = np.zeros((len(alphas)+1, 4))
+    elif fit_func_name == "SELP":
+        initial_guess_mat = np.zeros((len(alphas)+1, 5))
     return initial_guess_mat
 
 def SED_alpha(alpha, dNdE_b, dNdE_b_u, tau, E_final):
@@ -329,7 +378,127 @@ def dNdE_to_mu_MAGIC(dNdEa, Ebinw, migmatval, Eest):
     for i in range(len(Eest)):
         mu_vec_reco[i] = np.sum(mu_vec * migmatval[:,i])
     return mu_vec_reco
+############################################IF using np.select#######################3
+# def best_mubg_mugam_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
+#     def mu_gam_f(eps, mu_gam, delta_mu_gam):
+#         return mu_gam + eps * delta_mu_gam
+#     def mu_BG_2_deq(alpha, Noff, Non, mu_gam):
+#         a = alpha + 1
+#         b = (1 + alpha) * mu_gam - alpha * (Non + Noff)
+#         c = -alpha * Noff * mu_gam
+#         mubg = (-b + np.sqrt(np.square(b) - 4 * a * c)) / (2. * a)
+#         return mubg
+    
+#     fAlpha = 1/Noffregions
+#     a = -fAlpha
+#     b = delta_mu_gam * (1 - fAlpha) - mu_gam/delta_mu_gam * fAlpha
+#     c = fAlpha * (Non + Noff) + np.square(delta_mu_gam) + mu_gam * (1 - fAlpha)
+#     d = delta_mu_gam * (mu_gam + fAlpha * Noff - Non)
+#     best_mubg = np.zeros(len(mu_gam))
+#     best_mugam = np.zeros(len(mu_gam))
+#     for j in range(len(b)):
+#         epsilon = np.roots([a, b[j], c[j], d[j]])
+#         epsilon2 = np.real(epsilon[np.isreal(epsilon)])
+#         chi2proxy = np.zeros(len(epsilon2))
+#         mu_gam2 = np.zeros(len(epsilon2))
+#         mu_bg2 = np.zeros(len(epsilon2))
+#         for i, eps in enumerate(epsilon2):
+#             mu_gam2[i] = mu_gam_f(eps, mu_gam[j], delta_mu_gam[j])
+#             mu_bg2[i] = mu_BG_2_deq(fAlpha, Noff[j], Non[j], mu_gam2[i])
+#             chi2proxy[i] = -2*(np.log(poisson.pmf(Non[j], mu_bg2[i]+mu_gam2[i])) + np.log(poisson.pmf(Noff[j], mu_bg2[i]/fAlpha)) - 0.5*eps*eps)
+#         best_mugam[j], best_mubg[j] = mu_gam2[np.argmin(chi2proxy)], mu_bg2[np.argmin(chi2proxy)]
+#     return best_mugam, best_mubg
 
+# def dNdE_to_mu_MAGIC_IRF(dNdEa, Ebinw, migmatval, migmaterr, Eest):
+#     mu_vec = dNdEa * Ebinw
+#     mu_vec_reco = np.zeros(len(Eest))
+#     mu_vec_reco_u = np.zeros(len(Eest))
+#     for i in range(len(Eest)):
+#         mu_vec_reco[i] = np.sum(mu_vec * migmatval[:,i])
+#         mu_vec_reco_u[i] = np.sqrt(np.sum(mu_vec * migmaterr[:,i])) #as mu_vec_u = 0
+#     return mu_vec_reco, mu_vec_reco_u
+
+# def Poisson_logL_IRF(Non, Noff, mu_gam, delta_mu_gam, mu_bg, Noffregions): #expectedgammas = mu_gam, bckg = Noff/Noffregions, observed = Non
+#     logL = np.log(poisson.pmf(Non, mu_gam + mu_bg)) + np.log(poisson.pmf(Noff, Noffregions * mu_bg))
+#     logLmax = np.log(poisson.pmf(Non, Non)) + np.log(poisson.pmf(Noff, Noff))
+#     return -2 * (logL - logLmax)
+
+# def Poisson_logL_Non0_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions): #canviat per IRF
+#     mu_bg = Noff / (1. + Noffregions)
+#     mu_gam2 = -np.square(delta_mu_gam) + mu_gam
+#     for i in range(len(mu_gam2)): #FIXME ?
+#         if mu_gam2[i] < 0.:
+#             mu_gam2[i] = 0
+#     return Poisson_logL_IRF(Non, Noff, mu_gam2, delta_mu_gam, mu_bg, Noffregions)
+
+# def Poisson_logL_Noff0_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
+#     fAlpha = 1/Noffregions
+#     mu_bg = fAlpha * Non / (1 + fAlpha) - mu_gam -np.square(delta_mu_gam)/fAlpha
+#     mu_gam2 = np.zeros(len(mu_gam))
+#     for i in range(len(mu_bg)):
+#         if mu_bg[i] < 0.:
+#             mu_bg[i] = 0
+#             a = 1.
+#             b = -mu_gam[i] + np.square(delta_mu_gam[i])
+#             c = -Non[i] + np.square(delta_mu_gam[i])
+#             mu_gam2[i] = (-b + np.sqrt(np.square(b) - 4 * a * c)) / (2. * a)
+#         else:
+#             mu_gam2[i] = mu_gam[i] + np.square(delta_mu_gam[i]) / fAlpha
+#     return Poisson_logL_IRF(Non, Noff, mu_gam2, delta_mu_gam, mu_bg, Noffregions)
+
+# def Poisson_logL_small_mugam_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
+#     fAlpha = 1/Noffregions
+#     mu_bg = fAlpha * (Noff + Non) / (1+fAlpha)
+#     return Poisson_logL_IRF(Non, Noff, mu_gam, delta_mu_gam, mu_bg, Noffregions)
+
+# def Poisson_logL_noIRF_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
+#     return Poisson_logL_else(Non, Noff, mu_gam, Noffregions)
+
+# def Poisson_logL_else_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
+#     mu_gam2, mu_bg = best_mubg_mugam_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions)
+#     for i in range(len(mu_gam2)):
+#         if mu_gam2[i] < 0.:
+#             mu_gam2[i] = 0
+#             mu_bg[i] = (Non[i] + Noff[i])/ (1 + Noffregions)
+#     return Poisson_logL_IRF(Non, Noff, mu_gam2, delta_mu_gam, mu_bg, Noffregions)
+
+
+# def Gauss_logL_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions): #canviat per IRF
+#     Noff_n = Noff/Noffregions #Noff_n_unc = np.sqrt(Noff_n) but as we have to ^2 later we just don't define it. (same for Non_u)
+#     diff = Non - Noff_n - mu_gam
+#     delta_exp = np.sqrt(np.square(delta_mu_gam) + Noff_n)
+#     delta_diff = np.sqrt(Non + np.square(delta_exp)) 
+#     return np.square(diff)/np.square(delta_diff)
+
+
+# def Poisson_logL(Non, Noff, mu_gam, mu_bg, Noffregions):
+#     logL = np.log(poisson.pmf(Non, mu_gam + mu_bg)) + np.log(poisson.pmf(Noff, Noffregions * mu_bg))
+#     logLmax = np.log(poisson.pmf(Non, Non)) + np.log(poisson.pmf(Noff, Noff))
+#     return -2 * (logL - logLmax)
+
+# def Poisson_logL_Non0(Non, Noff, mu_gam, Noffregions):
+#     mu_bg = Noff / (1. + Noffregions)
+#     return Poisson_logL(Non, Noff, mu_gam, mu_bg, Noffregions)
+
+# def Poisson_logL_Noff0(Non, Noff, mu_gam, Noffregions):
+#     fAlpha = 1/Noffregions
+#     mu_bg = fAlpha * Non / (1 + fAlpha) - mu_gam
+#     for i in range(len(mu_bg)):
+#         if mu_bg[i] < 0.:
+#             mu_bg[i] = 0
+#     return Poisson_logL(Non, Noff, mu_gam, mu_bg, Noffregions)
+
+# def Poisson_logL_else(Non, Noff, mu_gam, Noffregions):
+#     mu_bg = mu_BG(mu_gam, Non, Noff, Noffregions)
+#     return Poisson_logL(Non, Noff, mu_gam, mu_bg, Noffregions)
+
+# def Gauss_logL(Non, Noff, mu_gam, Noffregions):
+#     diff = Non - Noff/Noffregions - mu_gam
+#     delta_diff = np.sqrt(Non + Noff/Noffregions) 
+#     return np.square(diff)/np.square(delta_diff)
+
+
+########################################IF with for and if elif
 def best_mubg_mugam_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
     def mu_gam_f(eps, mu_gam, delta_mu_gam):
         return mu_gam + eps * delta_mu_gam
@@ -345,16 +514,20 @@ def best_mubg_mugam_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
     b = delta_mu_gam * (1 - fAlpha) - mu_gam/delta_mu_gam * fAlpha
     c = fAlpha * (Non + Noff) + np.square(delta_mu_gam) + mu_gam * (1 - fAlpha)
     d = delta_mu_gam * (mu_gam + fAlpha * Noff - Non)
-    epsilon = np.roots([a, b, c, d])
-    epsilon2 = np.real(epsilon[np.isreal(epsilon)])
-    chi2proxy = np.zeros(len(epsilon2))
-    mu_gam2 = np.zeros(len(epsilon2))
-    mu_bg2 = np.zeros(len(epsilon2))
-    for i, eps in enumerate(epsilon2):
-        mu_gam2[i] = mu_gam_f(eps, mu_gam, delta_mu_gam)
-        mu_bg2[i] = mu_BG_2_deq(fAlpha, Noff, Non, mu_gam2[i])
-        chi2proxy[i] = -2*(np.log(poisson.pmf(Non, mu_bg2[i]+mu_gam2[i])) + np.log(poisson.pmf(Noff, mu_bg2[i]/fAlpha)) - 0.5*eps*eps)
-    best_mugam, best_mubg = mu_gam2[np.argmin(chi2proxy)], mu_bg2[np.argmin(chi2proxy)]
+    if np.isnan(mu_gam):
+        print("mu_gam is nan")
+        return np.nan, np.nan
+    else:
+        epsilon = np.roots([a, b, c, d])
+        epsilon2 = np.real(epsilon[np.isreal(epsilon)])
+        chi2proxy = np.zeros(len(epsilon2))
+        mu_gam2 = np.zeros(len(epsilon2))
+        mu_bg2 = np.zeros(len(epsilon2))
+        for i, eps in enumerate(epsilon2):
+            mu_gam2[i] = mu_gam_f(eps, mu_gam, delta_mu_gam)
+            mu_bg2[i] = mu_BG_2_deq(fAlpha, Noff, Non, mu_gam2[i])
+            chi2proxy[i] = -2*(np.log(poisson.pmf(Non, mu_bg2[i]+mu_gam2[i])) + np.log(poisson.pmf(Noff, mu_bg2[i]/fAlpha)) - 0.5*eps*eps)
+        best_mugam, best_mubg = mu_gam2[np.argmin(chi2proxy)], mu_bg2[np.argmin(chi2proxy)]
     return best_mugam, best_mubg
 
 def dNdE_to_mu_MAGIC_IRF(dNdEa, Ebinw, migmatval, migmaterr, Eest):
@@ -363,7 +536,7 @@ def dNdE_to_mu_MAGIC_IRF(dNdEa, Ebinw, migmatval, migmaterr, Eest):
     mu_vec_reco_u = np.zeros(len(Eest))
     for i in range(len(Eest)):
         mu_vec_reco[i] = np.sum(mu_vec * migmatval[:,i])
-        mu_vec_reco_u[i] = np.sqrt(np.sum(mu_vec * migmaterr[:,i])) #as mu_vec_u = 0
+        mu_vec_reco_u[i] = np.sqrt(np.sum(mu_vec*mu_vec * np.square(migmaterr[:,i]))) #as mu_vec_u = 0
     return mu_vec_reco, mu_vec_reco_u
 
 def Poisson_logL_IRF(Non, Noff, mu_gam, delta_mu_gam, mu_bg, Noffregions): #expectedgammas = mu_gam, bckg = Noff/Noffregions, observed = Non
@@ -401,18 +574,21 @@ def Poisson_logL_noIRF_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
 
 def Poisson_logL_else_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
     mu_gam2, mu_bg = best_mubg_mugam_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions)
-    if mu_gam2 < 0.:
+    if np.isnan(mu_gam2):
+        return 99999999999999
+    elif mu_gam2 < 0.:
         mu_gam2 = 0
         mu_bg = (Non + Noff)/ (1 + Noffregions)
-    return Poisson_logL_IRF(Non, Noff, mu_gam, delta_mu_gam, mu_bg, Noffregions)
+    
+    return Poisson_logL_IRF(Non, Noff, mu_gam2, delta_mu_gam, mu_bg, Noffregions)
 
 
 def Gauss_logL_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions): #canviat per IRF
     Noff_n = Noff/Noffregions #Noff_n_unc = np.sqrt(Noff_n) but as we have to ^2 later we just don't define it. (same for Non_u)
     diff = Non - Noff_n - mu_gam
-    delta_exp = np.sqrt(np.square(delta_mu_gam) + Noff_n)
-    delta_diff = np.sqrt(Non + np.square(delta_exp)) 
-    return np.square(diff)/np.square(delta_diff)
+    delta_exp = np.square(delta_mu_gam) + Noff/(Noffregions*Noffregions)
+    delta_diff = Non + delta_exp
+    return np.square(diff)/delta_diff
 
 
 def Poisson_logL(Non, Noff, mu_gam, mu_bg, Noffregions):
