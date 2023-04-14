@@ -6,6 +6,7 @@ import pandas as pd
 import yaml
 
 pathstring = "/data/magic/users-ifae/rgrau/EBL-splines/"#"/home/rgrau/Desktop/EBL_pic_sync/"#"/data/magic/users-ifae/rgrau/EBL-splines/"
+Norm = 0.25 #normalization energy in TeV
 
 def general_config():
     with open("{0}EBL_MC_general_config.yml".format(pathstring), "r") as f:
@@ -158,12 +159,12 @@ def fit_func_select(fit_func_name, knots = 3, Efirst = 0.2 , DeltaE = 1.12):
                 gamma[0] = gamma0
                 phi[0] = phi_0
                 gamma[1] = gamma[0] + delta_gamma[0]
-                phi[1] = phi[0] * (Eknot/0.25) ** delta_gamma[0]
+                phi[1] = phi[0] * (Eknot/Norm) ** delta_gamma[0]
                 for i in range(len(xdata)):
                     if xdata[i] < Eknot:
-                        polw[i] = phi[0] * (xdata[i]/0.25) ** (-gamma[0])
+                        polw[i] = phi[0] * (xdata[i]/Norm) ** (-gamma[0])
                     elif xdata[i] >= Eknot:
-                        polw[i] = phi[1] * (xdata[i]/0.25) ** (-gamma[1])
+                        polw[i] = phi[1] * (xdata[i]/Norm) ** (-gamma[1])
                 return polw
             else:
                 polw = np.zeros(len(xdata))
@@ -180,23 +181,23 @@ def fit_func_select(fit_func_name, knots = 3, Efirst = 0.2 , DeltaE = 1.12):
                 phi[0] = phi_0
                 for i in range(knots):
                     gamma[i+1] = gamma[i] + delta_gamma[i]
-                    phi[i+1] = phi[i] * (Ebr[i]/0.25) ** delta_gamma[i]
+                    phi[i+1] = phi[i] * (Ebr[i]/Norm) ** delta_gamma[i]
                 for i in range(len(xdata)):
                     for j in range(knots):
                         if xdata[i]<Ebr[0]:
-                            polw[i] = phi[0] * (xdata[i]/0.25) ** (-gamma[0])
+                            polw[i] = phi[0] * (xdata[i]/Norm) ** (-gamma[0])
                         elif Ebr[-1] < xdata[i]:
-                            polw[i] = phi[-1] * (xdata[i]/0.25) ** (-gamma[-1])
+                            polw[i] = phi[-1] * (xdata[i]/Norm) ** (-gamma[-1])
                         elif Ebr[j] <= xdata[i] < Ebr[j+1]:
-                            polw[i] = phi[j+1] * (xdata[i]/0.25) ** (-gamma[j+1])
+                            polw[i] = phi[j+1] * (xdata[i]/Norm) ** (-gamma[j+1])
                 return polw
         return(fit_func)
 
     elif fit_func_name == "PWL":
         def fit_func(xdata, params):
             phi = params[0]
-            gamma = params [1]
-            PLW = phi / ((xdata/0.25) ** gamma)
+            gamma = params[1]
+            PLW = phi / ((xdata/Norm) ** gamma)
             return PLW
         return(fit_func)
 
@@ -205,8 +206,8 @@ def fit_func_select(fit_func_name, knots = 3, Efirst = 0.2 , DeltaE = 1.12):
             phi0 = params[0]
             alpha = params[1]
             beta = params[2]
-            #Enorm = 1TeV  # (it is 0.25 TeV set by default) if it is 1 TeV no need ot include it (if it is different, need to add it to te LP function)
-            LP = phi0 * np.power((xdata/0.25), (-alpha - beta * beta * np.log(xdata/0.25)))
+            #Enorm = 1TeV  # (it is 0.249 TeV set by default) if it is 1 TeV no need ot include it (if it is different, need to add it to te LP function)
+            LP = phi0 * np.power((xdata/Norm), (-alpha - beta * beta * np.log10(xdata/Norm)))
             return LP
         return(fit_func)
 
@@ -216,7 +217,7 @@ def fit_func_select(fit_func_name, knots = 3, Efirst = 0.2 , DeltaE = 1.12):
             alpha = params[1]
             beta = params[2]
             #Enorm = 1TeV #if it is 1 TeV no need ot include it (if it is different, need to add it to te LP function)
-            freeLP = phi0 * np.power((xdata/0.25), (-alpha - beta * abs(beta) * np.log(xdata/0.25)))
+            freeLP = phi0 * np.power((xdata/Norm), (-alpha - beta * abs(beta) * np.log10(xdata/Norm)))
             return freeLP
         return(fit_func)
     
@@ -225,7 +226,7 @@ def fit_func_select(fit_func_name, knots = 3, Efirst = 0.2 , DeltaE = 1.12):
             phi = params[0]
             gamma = params[1]
             c = params[2]
-            EPWL = phi / ((xdata/0.249) ** gamma) * np.exp(-xdata / (c * c))
+            EPWL = phi / ((xdata/Norm) ** gamma) * np.exp(-xdata / (c * c))
             return EPWL
         return fit_func
     
@@ -235,7 +236,7 @@ def fit_func_select(fit_func_name, knots = 3, Efirst = 0.2 , DeltaE = 1.12):
             alpha = params[1]
             beta = params[2]
             c = params[3]
-            ELP = phi0 * np.power((xdata/0.249), (-alpha - beta * beta * np.log10(xdata/0.249))) * np.exp(-xdata / (c * c))
+            ELP = phi0 * np.power((xdata/Norm), (-alpha - beta * beta * np.log10(xdata/Norm))) * np.exp(-xdata / (c * c))
             return ELP
         return fit_func
         
@@ -245,7 +246,7 @@ def fit_func_select(fit_func_name, knots = 3, Efirst = 0.2 , DeltaE = 1.12):
             gamma = params[1]
             c = params[2]
             d = params[3]
-            SEPWL = phi / ((xdata/0.249) ** gamma) * np.exp(-np.power(xdata / (c * c), d))
+            SEPWL = phi / ((xdata/Norm) ** gamma) * np.exp(-np.power(xdata / (c * c), d))
             return SEPWL
         return fit_func
     
@@ -256,10 +257,9 @@ def fit_func_select(fit_func_name, knots = 3, Efirst = 0.2 , DeltaE = 1.12):
             beta = params[2]
             c = params[3]
             d = params[4]
-            SELP = phi0 * np.power((xdata/0.249), (-alpha - beta * beta * np.log10(xdata/0.249))) * np.exp(-np.power(xdata / (c * c), d))
+            SELP = phi0 * np.power((xdata/Norm), (-alpha - beta * beta * np.log10(xdata/Norm))) * np.exp(-np.power(xdata / (c * c), d))
             return SELP
         return fit_func
-
 
     else:
         raise Exception('The function "{func}" has not been implemented.'.format(func = fit_func_name))
@@ -514,20 +514,20 @@ def best_mubg_mugam_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
     b = delta_mu_gam * (1 - fAlpha) - mu_gam/delta_mu_gam * fAlpha
     c = fAlpha * (Non + Noff) + np.square(delta_mu_gam) + mu_gam * (1 - fAlpha)
     d = delta_mu_gam * (mu_gam + fAlpha * Noff - Non)
-    if np.isnan(mu_gam):
-        print("mu_gam is nan")
-        return np.nan, np.nan
-    else:
-        epsilon = np.roots([a, b, c, d])
-        epsilon2 = np.real(epsilon[np.isreal(epsilon)])
-        chi2proxy = np.zeros(len(epsilon2))
-        mu_gam2 = np.zeros(len(epsilon2))
-        mu_bg2 = np.zeros(len(epsilon2))
-        for i, eps in enumerate(epsilon2):
-            mu_gam2[i] = mu_gam_f(eps, mu_gam, delta_mu_gam)
-            mu_bg2[i] = mu_BG_2_deq(fAlpha, Noff, Non, mu_gam2[i])
-            chi2proxy[i] = -2*(np.log(poisson.pmf(Non, mu_bg2[i]+mu_gam2[i])) + np.log(poisson.pmf(Noff, mu_bg2[i]/fAlpha)) - 0.5*eps*eps)
-        best_mugam, best_mubg = mu_gam2[np.argmin(chi2proxy)], mu_bg2[np.argmin(chi2proxy)]
+    # if np.isnan(mu_gam) or np.isnan(delta_mu_gam):
+    #     print("mu_gam or delta_mu_gam is nan")
+    #     return np.nan, np.nan
+    # else:
+    epsilon = np.roots([a, b, c, d])
+    epsilon2 = np.real(epsilon[np.isreal(epsilon)])
+    chi2proxy = np.zeros(len(epsilon2))
+    mu_gam2 = np.zeros(len(epsilon2))
+    mu_bg2 = np.zeros(len(epsilon2))
+    for i, eps in enumerate(epsilon2):
+        mu_gam2[i] = mu_gam_f(eps, mu_gam, delta_mu_gam)
+        mu_bg2[i] = mu_BG_2_deq(fAlpha, Noff, Non, mu_gam2[i])
+        chi2proxy[i] = -2*(np.log(poisson.pmf(Non, mu_bg2[i]+mu_gam2[i])) + np.log(poisson.pmf(Noff, mu_bg2[i]/fAlpha)) - 0.5*eps*eps)
+    best_mugam, best_mubg = mu_gam2[np.argmin(chi2proxy)], mu_bg2[np.argmin(chi2proxy)]
     return best_mugam, best_mubg
 
 def dNdE_to_mu_MAGIC_IRF(dNdEa, Ebinw, migmatval, migmaterr, Eest):
@@ -558,7 +558,7 @@ def Poisson_logL_Noff0_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
         mu_bg = 0
         a = 1.
         b = -mu_gam + np.square(delta_mu_gam)
-        c = -Non + np.square(delta_mu_gam)
+        c = -Non * np.square(delta_mu_gam)
         mu_gam2 = (-b + np.sqrt(np.square(b) - 4 * a * c)) / (2. * a)
     else:
         mu_gam2 = mu_gam + np.square(delta_mu_gam) / fAlpha
@@ -574,9 +574,9 @@ def Poisson_logL_noIRF_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
 
 def Poisson_logL_else_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
     mu_gam2, mu_bg = best_mubg_mugam_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions)
-    if np.isnan(mu_gam2):
-        return 99999999999999
-    elif mu_gam2 < 0.:
+    # if np.isnan(mu_gam2):
+    #     return 99999999999999
+    if mu_gam2 < 0.:
         mu_gam2 = 0
         mu_bg = (Non + Noff)/ (1 + Noffregions)
     

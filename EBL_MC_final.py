@@ -21,7 +21,7 @@ systematics = 0.07
 Emin = 0.06
 Emax = 15.
 Chain_guess = True
-Extratxt = "FINAL"
+Extratxt = "FINAL_5lim"
 pathstring = "/data/magic/users-ifae/rgrau/EBL-splines/"#"/home/rgrau/Desktop/EBL_pic_sync/"#"/data/magic/users-ifae/rgrau/EBL-splines/"
 
 #Load the general configuration file
@@ -134,22 +134,22 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
                     errors.append(0.01)
                 m.limits = MBPWL_limits
             elif fit_func_name == "PWL":
-                m.limits = ([(1e-7,1e-3), (None, None)])
+                m.limits = ([(1e-7,1e-3), (None, 5.)])
                 errors = [1e-7, 0.01]
             elif fit_func_name == "LP" or fit_func_name == "freeLP":
-                m.limits = ([(1e-7, 1e-3), (-2., None), (None, None)])
+                m.limits = ([(1e-7, 1e-3), (None, 5.), (None, None)])
                 errors = [1e-7, 0.01, 0.01]
             elif fit_func_name == "EPWL":
-                m.limits = ([(1e-7, 1e-3), (None, None), (None, None)])
+                m.limits = ([(1e-7, 1e-3), (None, 5.), (None, None)])
                 errors = [1e-8, 1.0, np.sqrt(500.)]
             elif fit_func_name == "ELP":
-                m.limits = ([(1e-7, 1e-3), (-2., None), (None, None), (None, None)])
+                m.limits = ([(1e-7, 1e-3), (-2., 5.), (None, None), (None, None)])
                 errors = [1e-8, 1., 0.1, np.sqrt(500.)]
             elif fit_func_name == "SEPWL":
-                m.limits = ([(1e-7, 1e-3), (None, None), (None, None), (None, None)])
+                m.limits = ([(1e-7, 1e-3), (None, 5.), (None, None), (None, None)])
                 errors = [1e-8, 1.0, np.sqrt(500.), 1.]
             elif fit_func_name == "SELP":
-                m.limits = ([(1e-7, 1e-3), (-2., None), (None, None), (None, None), (None, None)])
+                m.limits = ([(1e-7, 1e-3), (-2., 5.), (None, None), (None, None), (None, None)])
                 errors = [1e-8, 1., 0.1, np.sqrt(500.), 0.1]
             #TODO ADD other functions
             #m.tol = 1e-6
@@ -211,18 +211,19 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
         print("Starting function {func} for iter {iter}".format(func = fit_func_name, iter = iter))
         EBL_Model, initial_guess_0, initial_guess_pos, step, last_bin, first_bin, knots, Efirst, DeltaE, Source_z = config_fit(fit_func_name)
         fit_func = fit_func_select(fit_func_name, knots, Efirst, DeltaE) #define the fit function for the minimization
-
         # name the folder where the data will be stored and the datafile name
         if Spectrum_func_name == "LP":
             if not os.path.exists('{path}EBL{niter}_{func1}{curv}_{func2}_{telescope}_with_{systematics}_Systematics_{extra}'.format(path = pathstring, curv = LP_curvature, func1 = Spectrum_func_name, func2 = fit_func_name, niter = niter, knots = knots, telescope = Telescope, systematics = systematics, extra = Extratxt)):
                 os.mkdir('{path}EBL{niter}_{func1}{curv}_{func2}_{telescope}_with_{systematics}_Systematics_{extra}'.format(path = pathstring, curv = LP_curvature, func1 = Spectrum_func_name, func2 = fit_func_name, niter = niter, knots = knots, telescope = Telescope, systematics = systematics, extra = Extratxt))
-                os.popen('cp {path}EBL_fit_config2_1.yml {path}EBL{niter}_{func1}{curv}_{func2}_{telescope}_with_{systematics}_Systematics_{extra}/EBL_fit_config2_1.yml'.format(path = pathstring, curv = LP_curvature, func1 = Spectrum_func_name, func2 = fit_func_name, niter = niter, knots = knots, telescope = Telescope, systematics = systematics, extra = Extratxt))
+                os.popen('cp {path}EBL_MC_config_data_{func1}.yml {path}EBL{niter}_{func1}{curv}_{func2}_{telescope}_with_{systematics}_Systematics_{extra}/EBL_MC_config_data_{func1}.yml'.format(path = pathstring, curv = LP_curvature, func1 = Spectrum_func_name, func2 = fit_func_name, niter = niter, knots = knots, telescope = Telescope, systematics = systematics, extra = Extratxt))                
+                os.popen('cp {path}EBL_MC_config_fit_{func2}.yml {path}EBL{niter}_{func1}{curv}_{func2}_{telescope}_with_{systematics}_Systematics_{extra}/EBL_MC_config_fit_{func2}.yml'.format(path = pathstring, curv = LP_curvature, func1 = Spectrum_func_name, func2 = fit_func_name, niter = niter, knots = knots, telescope = Telescope, systematics = systematics, extra = Extratxt))
             hdf5filename = "{path}EBL{niter}_{func1}{curv}_{func2}_{telescope}_with_{systematics}_Systematics_{extra}/EBL_mult_nit{nit}of{niter}_{datetime}.hdf5".format(path = pathstring, curv = LP_curvature, func1 = Spectrum_func_name, func2 = fit_func_name ,nit = iter, niter = niter, datetime = datetime, knots = knots, telescope = Telescope, systematics = systematics, extra = Extratxt)
             savefile = h5py.File(hdf5filename, "w")
         else:
             if not os.path.exists('{path}EBL{niter}_{func1}_{func2}_{telescope}_with_{systematics}_Systematics_{extra}'.format(path = pathstring, func1 = Spectrum_func_name, func2 = fit_func_name, niter = niter, knots = knots, telescope = Telescope, systematics = systematics, extra = Extratxt)):
                 os.mkdir('{path}EBL{niter}_{func1}_{func2}_{telescope}_with_{systematics}_Systematics_{extra}'.format(path = pathstring, func1 = Spectrum_func_name, func2 = fit_func_name, niter = niter, knots = knots, telescope = Telescope, systematics = systematics, extra = Extratxt))
-                os.popen('cp {path}EBL_fit_config2_1.yml {path}EBL{niter}_{func1}_{func2}_{telescope}_with_{systematics}_Systematics_{extra}/EBL_fit_config2_1.yml'.format(path = pathstring, func1 = Spectrum_func_name, func2 = fit_func_name, niter = niter, knots = knots, telescope = Telescope, systematics = systematics, extra = Extratxt))
+                os.popen('cp {path}EBL_MC_config_data_{func1}.yml {path}EBL{niter}_{func1}{curv}_{func2}_{telescope}_with_{systematics}_Systematics_{extra}/EBL_MC_config_data_{func1}.yml'.format(path = pathstring, curv = LP_curvature, func1 = Spectrum_func_name, func2 = fit_func_name, niter = niter, knots = knots, telescope = Telescope, systematics = systematics, extra = Extratxt))                                
+                os.popen('cp {path}EBL_MC_config_fit_{func2}.yml {path}EBL{niter}_{func1}_{func2}_{telescope}_with_{systematics}_Systematics_{extra}/EBL_MC_config_fit_{func2}.yml'.format(path = pathstring, func1 = Spectrum_func_name, func2 = fit_func_name, niter = niter, knots = knots, telescope = Telescope, systematics = systematics, extra = Extratxt))
             hdf5filename = "{path}EBL{niter}_{func1}_{func2}_{telescope}_with_{systematics}_Systematics_{extra}/EBL_mult_nit{nit}of{niter}_{datetime}.hdf5".format(path = pathstring, func1 = Spectrum_func_name, func2 = fit_func_name ,nit = iter, niter = niter, datetime = datetime, knots = knots, telescope = Telescope, systematics = systematics, extra = Extratxt)
             savefile = h5py.File(hdf5filename, "w")
 
