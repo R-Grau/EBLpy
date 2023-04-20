@@ -21,7 +21,9 @@ systematics = 0.07
 Emin = 0.06
 Emax = 15.
 Chain_guess = True
-Extratxt = "FINAL_5lim"
+migmatmaxu = 0.51
+other_initial_guess_position = 0. #this is only used for non converging fits
+Extratxt = "FINAL_FINAL_051_retry0_2"
 pathstring = "/data/magic/users-ifae/rgrau/EBL-splines/"#"/home/rgrau/Desktop/EBL_pic_sync/"#"/data/magic/users-ifae/rgrau/EBL-splines/"
 
 #Load the general configuration file
@@ -134,19 +136,56 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
                     errors.append(0.01)
                 m.limits = MBPWL_limits
             elif fit_func_name == "PWL":
-                m.limits = ([(1e-7,1e-3), (None, 5.)])
+                m.limits = ([(1e-7, 1e-3), (None, None)])
                 errors = [1e-7, 0.01]
             elif fit_func_name == "LP" or fit_func_name == "freeLP":
-                m.limits = ([(1e-7, 1e-3), (None, 5.), (None, None)])
+                m.limits = ([(1e-7, 1e-3), (None, None), (None, None)])
                 errors = [1e-7, 0.01, 0.01]
             elif fit_func_name == "EPWL":
-                m.limits = ([(1e-7, 1e-3), (None, 5.), (None, None)])
+                m.limits = ([(1e-7, 1e-3), (None, None), (None, None)])
+                errors = [1e-8, 1.0, np.sqrt(500.)]
+            elif fit_func_name == "ELP":
+                m.limits = ([(1e-7, 1e-3), (-2., None), (None, None), (None, None)])
+                errors = [1e-8, 1., 0.1, np.sqrt(500.)]
+            elif fit_func_name == "SEPWL":
+                m.limits = ([(1e-7, 1e-3), (None, None), (None, None), (None, None)])
+                errors = [1e-8, 1.0, np.sqrt(500.), 1.]
+            elif fit_func_name == "SELP":
+                m.limits = ([(1e-7, 1e-3), (-2., None), (None, None), (None, None), (None, None)])
+                errors = [1e-8, 1., 0.1, np.sqrt(500.), 0.1]
+            #TODO ADD other functions
+            #m.tol = 1e-6
+            #m.strategy = 2
+            m.errors = errors
+            
+            m.migrad()
+            return m
+        
+        def fit2(initial_guess):
+            
+            m2LogL.errordef = Minuit.LIKELIHOOD
+            m = Minuit(m2LogL, initial_guess)
+            if fit_func_name == "MBPWL": #defines limits to faster and better find the minimum. Can be changed if the intrinsic spectrum function is changed.
+                MBPWL_limits = ([(1e-7, 1e-3), (-4., 5.)])
+                errors = ([1e-7, 0.01])
+                for i in range(knots):
+                    MBPWL_limits.append((0., 5.))
+                    errors.append(0.01)
+                m.limits = MBPWL_limits
+            elif fit_func_name == "PWL":
+                m.limits = ([(1e-7, 1e-3), (-2., 5.)])
+                errors = [1e-7, 0.01]
+            elif fit_func_name == "LP" or fit_func_name == "freeLP":
+                m.limits = ([(1e-7, 1e-3), (-2., 5.), (None, None)])
+                errors = [1e-7, 0.01, 0.01]
+            elif fit_func_name == "EPWL":
+                m.limits = ([(1e-7, 1e-3), (-2., 5.), (None, None)])
                 errors = [1e-8, 1.0, np.sqrt(500.)]
             elif fit_func_name == "ELP":
                 m.limits = ([(1e-7, 1e-3), (-2., 5.), (None, None), (None, None)])
                 errors = [1e-8, 1., 0.1, np.sqrt(500.)]
             elif fit_func_name == "SEPWL":
-                m.limits = ([(1e-7, 1e-3), (None, 5.), (None, None), (None, None)])
+                m.limits = ([(1e-7, 1e-3), (-2., 5.), (None, None), (None, None)])
                 errors = [1e-8, 1.0, np.sqrt(500.), 1.]
             elif fit_func_name == "SELP":
                 m.limits = ([(1e-7, 1e-3), (-2., 5.), (None, None), (None, None), (None, None)])
@@ -176,6 +215,8 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
         migmatval = migrmatrix.values() #m^2 * s #values
         if IRF_u:
             migmaterr = migrmatrix.errors()
+            migmatval[(migmaterr/migmatval)>migmatmaxu] = 0
+            migmaterr[(migmaterr/migmatval)>migmatmaxu] = 0
         migmatxEtrue = migrmatrix.axis("x").edges()/1e3 #TeV #edge values of X axis of the migration matrix (True Energy)
         migmatyEest = migrmatrix.axis("y").edges()/1e3 #TeV #edge values of Y axis of the migration matrix (Estimated Energy)
 
@@ -233,7 +274,7 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
                 print("The forward folding is done with background")
 
             def process2(iter_num, alphas, mu_on, mu_off):
-                chisqs = []
+                chisqs = np.ones(len(alphas)) * 99999999
                 global alpha, Non, Noff
                 alpha = initial_guess_pos
                 rng_num = iter_num
@@ -248,17 +289,45 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
                         alpha = alpha0
                         initial_guess = initial_guess_mat[i]
                         if alpha == initial_guess_pos:
-                            initial_guess = initial_guess_mat[0]
+                            initial_guess = initial_guess_mat[1]
                         things = fit(initial_guess = initial_guess)
                         if things.valid == False:
                             print("Function {0} did not minimize properly the {1} intrinsic spectra for iteration {2}".format(fit_func_name, Spectrum_func_name, iter))
-                            break
                             #print("Function {0} minimized properly the {1} intrinsic spectra for iteration {2}".format(fit_func_name, Spectrum_func_name, iter))
-                        
+                        else:    
+                            chi2 = m2LogL(things.values)
+                            # print("chi2: ", chi2)
+                            chisqs[i] = chi2
+                            
                         if i < len(alphas):
                             initial_guess_mat[i+1] = things.values
-                        chi2 = m2LogL(things.values)
-                        chisqs.append(chi2)
+                    for i, alpha0 in enumerate(alphas):
+                        if chisqs[i] == 99999999:
+                            print("Retrying alpha = {0} with different initial guess".format(alpha0))
+                            alpha = alpha0
+                            if i < len(alphas):
+                                initial_guess = initial_guess_mat[i+1]
+                            else:
+                                initial_guess = initial_guess_mat[i-1]
+                            things = fit(initial_guess = initial_guess)
+                            if things.valid == False:
+                                print("Function {0} did not minimize properly the {1} intrinsic spectra for iteration {2} with the other initial guess".format(fit_func_name, Spectrum_func_name, iter))
+                                print("The initial guess was: ", initial_guess)
+                                break
+                                # things = fit2(initial_guess = initial_guess)
+                                # if things.valid == False:
+                                #     print("Function {0} did not minimize properly the {1} intrinsic spectra for iteration {2} in the 3rd try with limits".format(fit_func_name, Spectrum_func_name, iter))
+                                #     break
+                                # else:
+                                #     chi2 = m2LogL(things.values)
+                                #     # print("chi2: ", chi2)
+                                #     chisqs[i] = chi2
+                                # print("Function {0} minimized properly the {1} intrinsic spectra for iteration {2} in 3rd try with limits".format(fit_func_name, Spectrum_func_name, iter))
+                            else:    
+                                print("Function {0} minimized properly the {1} intrinsic spectra for iteration {2} in 2nd try with the other initial guess".format(fit_func_name, Spectrum_func_name, iter))
+                                chi2 = m2LogL(things.values)
+                                # print("chi2: ", chi2)
+                                chisqs[i] = chi2                        
                 else:
                     for i, alpha0 in enumerate(alphas):
                         alpha = alpha0
@@ -272,7 +341,7 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
                 print("Function {0} minimized properly the {1} intrinsic spectra for iteration {2}".format(fit_func_name, Spectrum_func_name, iter))
 
                 return chisqs
-
+            
             alphas = alphas_creation(initial_guess_pos, first_bin, last_bin, step)
 
             my_generator2 = np.random.default_rng(iter)
@@ -283,10 +352,22 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
             mu_off = bckgmu_final 
 
             chisqs = process2(iter, alphas, mu_on, mu_off)
+            if (chisqs == 99999999).any(): #if the first try did not work, we try to minimize it with another initial guess position
+                print("As function {0} did not minimize properly the {1} intrinsic spectra for iteration {2} in the 2nd try with the other initial guess, we will try to minimize it with another initial guess position".format(fit_func_name, Spectrum_func_name, iter))
+                alphas2 = alphas_creation(other_initial_guess_position, first_bin, last_bin, step)
+                chisqs = process2(iter, alphas2, mu_on, mu_off)
+
+                #need to reorder the vectors in order to have the same order as the one with the previous initial guess.
+                #FIXME make all to go from 0 to max
+                initial_pos = np.where(alphas == alphas2[0])[0][0]
+                indices = np.argsort(alphas)
+                index_init = np.where(indices == initial_pos)[0][0]
+                chisqs = np.concatenate((chisqs[indices[index_init:]], np.flip(chisqs[indices[:index_init]])))
+
             if len(chisqs) != len(alphas):
                 continue
-            if np.isnan(chisqs).any():
-                continue
+            # if np.isnan(chisqs).any():
+            #     continue
             dset = savefile.create_dataset("alphas", data = alphas, dtype='float')
             dset = savefile.create_dataset("chisqs", data = chisqs, dtype='float')
 

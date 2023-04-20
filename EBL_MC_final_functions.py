@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.interpolate as interpolate
 from scipy.integrate import quad
-from scipy.stats import poisson
+from scipy.stats import poisson, norm
 import pandas as pd
 import yaml
 
@@ -268,7 +268,7 @@ def alphas_creation(initial_guess_pos, first_bin, last_bin, step):
     alphas1 = np.arange(initial_guess_pos + step, last_bin + step, step)
     alphas2 = np.arange(initial_guess_pos, first_bin - step, -step)
     alphas = np.append(alphas1, alphas2)
-    return alphas    
+    return np.round(alphas, decimals = 3)   
 
 def ig_mat_create(fit_func_name, alphas, knots):
     if fit_func_name == "MBPWL":
@@ -518,16 +518,21 @@ def best_mubg_mugam_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
     #     print("mu_gam or delta_mu_gam is nan")
     #     return np.nan, np.nan
     # else:
-    epsilon = np.roots([a, b, c, d])
-    epsilon2 = np.real(epsilon[np.isreal(epsilon)])
-    chi2proxy = np.zeros(len(epsilon2))
-    mu_gam2 = np.zeros(len(epsilon2))
-    mu_bg2 = np.zeros(len(epsilon2))
-    for i, eps in enumerate(epsilon2):
-        mu_gam2[i] = mu_gam_f(eps, mu_gam, delta_mu_gam)
-        mu_bg2[i] = mu_BG_2_deq(fAlpha, Noff, Non, mu_gam2[i])
-        chi2proxy[i] = -2*(np.log(poisson.pmf(Non, mu_bg2[i]+mu_gam2[i])) + np.log(poisson.pmf(Noff, mu_bg2[i]/fAlpha)) - 0.5*eps*eps)
-    best_mugam, best_mubg = mu_gam2[np.argmin(chi2proxy)], mu_bg2[np.argmin(chi2proxy)]
+    try:
+        epsilon = np.roots([a, b, c, d])
+        epsilon2 = np.real(epsilon[np.isreal(epsilon)])
+        chi2proxy = np.zeros(len(epsilon2))
+        mu_gam2 = np.zeros(len(epsilon2))
+        mu_bg2 = np.zeros(len(epsilon2))
+        for i, eps in enumerate(epsilon2):
+            mu_gam2[i] = mu_gam_f(eps, mu_gam, delta_mu_gam)
+            mu_bg2[i] = mu_BG_2_deq(fAlpha, Noff, Non, mu_gam2[i])
+            chi2proxy[i] = -2*(np.log(poisson.pmf(Non, mu_bg2[i]+mu_gam2[i])) + np.log(poisson.pmf(Noff, mu_bg2[i]/fAlpha)) - 0.5*eps*eps)
+        best_mugam, best_mubg = mu_gam2[np.argmin(chi2proxy)], mu_bg2[np.argmin(chi2proxy)]
+
+    except:
+        best_mugam = np.nan
+        best_mubg = np.nan
     return best_mugam, best_mubg
 
 def dNdE_to_mu_MAGIC_IRF(dNdEa, Ebinw, migmatval, migmaterr, Eest):
@@ -539,9 +544,15 @@ def dNdE_to_mu_MAGIC_IRF(dNdEa, Ebinw, migmatval, migmaterr, Eest):
         mu_vec_reco_u[i] = np.sqrt(np.sum(mu_vec*mu_vec * np.square(migmaterr[:,i]))) #as mu_vec_u = 0
     return mu_vec_reco, mu_vec_reco_u
 
-def Poisson_logL_IRF(Non, Noff, mu_gam, delta_mu_gam, mu_bg, Noffregions): #expectedgammas = mu_gam, bckg = Noff/Noffregions, observed = Non
-    logL = np.log(poisson.pmf(Non, mu_gam + mu_bg)) + np.log(poisson.pmf(Noff, Noffregions * mu_bg))
+def Poisson_logL_IRF(Non, Noff, mu_gam, mu_gam2, delta_mu_gam, mu_bg, Noffregions): #expectedgammas = mu_gam, bckg = Noff/Noffregions, observed = Non
+    if mu_gam2 == mu_gam:
+        mugamma_gauss = 1
+    else:
+        mugamma_gauss = norm.cdf(mu_gam2, loc = mu_gam, scale = delta_mu_gam)
+
+    logL = np.log(poisson.pmf(Non, mu_gam2 + mu_bg)) + np.log(poisson.pmf(Noff, Noffregions * mu_bg)) + np.log(mugamma_gauss)
     logLmax = np.log(poisson.pmf(Non, Non)) + np.log(poisson.pmf(Noff, Noff))
+
     return -2 * (logL - logLmax)
 
 def Poisson_logL_Non0_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions): #canviat per IRF
@@ -549,7 +560,7 @@ def Poisson_logL_Non0_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions): #canvia
     mu_gam2 = -np.square(delta_mu_gam) + mu_gam
     if mu_gam2 < 0.:#FIXME?
         mu_gam2 = 0
-    return Poisson_logL_IRF(Non, Noff, mu_gam2, delta_mu_gam, mu_bg, Noffregions)
+    return Poisson_logL_IRF(Non, Noff, mu_gam, mu_gam2, delta_mu_gam, mu_bg, Noffregions)
 
 def Poisson_logL_Noff0_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
     fAlpha = 1/Noffregions
@@ -562,12 +573,12 @@ def Poisson_logL_Noff0_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
         mu_gam2 = (-b + np.sqrt(np.square(b) - 4 * a * c)) / (2. * a)
     else:
         mu_gam2 = mu_gam + np.square(delta_mu_gam) / fAlpha
-    return Poisson_logL_IRF(Non, Noff, mu_gam2, delta_mu_gam, mu_bg, Noffregions)
+    return Poisson_logL_IRF(Non, Noff, mu_gam, mu_gam2, delta_mu_gam, mu_bg, Noffregions)
 
 def Poisson_logL_small_mugam_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
     fAlpha = 1/Noffregions
     mu_bg = fAlpha * (Noff + Non) / (1+fAlpha)
-    return Poisson_logL_IRF(Non, Noff, mu_gam, delta_mu_gam, mu_bg, Noffregions)
+    return Poisson_logL_IRF(Non, Noff, mu_gam, mu_gam, delta_mu_gam, mu_bg, Noffregions)
 
 def Poisson_logL_noIRF_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
     return Poisson_logL_else(Non, Noff, mu_gam, Noffregions)
@@ -576,16 +587,15 @@ def Poisson_logL_else_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
     mu_gam2, mu_bg = best_mubg_mugam_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions)
     # if np.isnan(mu_gam2):
     #     return 99999999999999
-    if mu_gam2 < 0.:
+    if mu_gam2 < 0.: #elif
         mu_gam2 = 0
         mu_bg = (Non + Noff)/ (1 + Noffregions)
     
-    return Poisson_logL_IRF(Non, Noff, mu_gam2, delta_mu_gam, mu_bg, Noffregions)
+    return Poisson_logL_IRF(Non, Noff, mu_gam, mu_gam2, delta_mu_gam, mu_bg, Noffregions)
 
 
 def Gauss_logL_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions): #canviat per IRF
-    Noff_n = Noff/Noffregions #Noff_n_unc = np.sqrt(Noff_n) but as we have to ^2 later we just don't define it. (same for Non_u)
-    diff = Non - Noff_n - mu_gam
+    diff = Non - Noff/Noffregions - mu_gam
     delta_exp = np.square(delta_mu_gam) + Noff/(Noffregions*Noffregions)
     delta_diff = Non + delta_exp
     return np.square(diff)/delta_diff
