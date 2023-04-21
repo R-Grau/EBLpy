@@ -545,13 +545,10 @@ def dNdE_to_mu_MAGIC_IRF(dNdEa, Ebinw, migmatval, migmaterr, Eest):
     return mu_vec_reco, mu_vec_reco_u
 
 def Poisson_logL_IRF(Non, Noff, mu_gam, mu_gam2, delta_mu_gam, mu_bg, Noffregions): #expectedgammas = mu_gam, bckg = Noff/Noffregions, observed = Non
-    if mu_gam2 == mu_gam:
-        mugamma_gauss = 1
-    else:
-        mugamma_gauss = norm.cdf(mu_gam2, loc = mu_gam, scale = delta_mu_gam)
+    mugamma_gauss = norm.pdf(mu_gam2, mu_gam, delta_mu_gam)
 
     logL = np.log(poisson.pmf(Non, mu_gam2 + mu_bg)) + np.log(poisson.pmf(Noff, Noffregions * mu_bg)) + np.log(mugamma_gauss)
-    logLmax = np.log(poisson.pmf(Non, Non)) + np.log(poisson.pmf(Noff, Noff))
+    logLmax = np.log(poisson.pmf(Non, Non)) + np.log(poisson.pmf(Noff, Noff)) + np.log(norm.pdf(mu_gam, mu_gam, delta_mu_gam))
 
     return -2 * (logL - logLmax)
 
@@ -592,7 +589,6 @@ def Poisson_logL_else_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
         mu_bg = (Non + Noff)/ (1 + Noffregions)
     
     return Poisson_logL_IRF(Non, Noff, mu_gam, mu_gam2, delta_mu_gam, mu_bg, Noffregions)
-
 
 def Gauss_logL_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions): #canviat per IRF
     diff = Non - Noff/Noffregions - mu_gam

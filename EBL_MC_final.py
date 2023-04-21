@@ -23,7 +23,7 @@ Emax = 15.
 Chain_guess = True
 migmatmaxu = 0.51
 other_initial_guess_position = 0. #this is only used for non converging fits
-Extratxt = "FINAL_FINAL_051_retry0_2"
+Extratxt = "FINAL_FINAL_051_retry0_2_x10f"
 pathstring = "/data/magic/users-ifae/rgrau/EBL-splines/"#"/home/rgrau/Desktop/EBL_pic_sync/"#"/data/magic/users-ifae/rgrau/EBL-splines/"
 
 #Load the general configuration file
@@ -161,42 +161,42 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
             m.migrad()
             return m
         
-        def fit2(initial_guess):
+        # def fit2(initial_guess):
             
-            m2LogL.errordef = Minuit.LIKELIHOOD
-            m = Minuit(m2LogL, initial_guess)
-            if fit_func_name == "MBPWL": #defines limits to faster and better find the minimum. Can be changed if the intrinsic spectrum function is changed.
-                MBPWL_limits = ([(1e-7, 1e-3), (-4., 5.)])
-                errors = ([1e-7, 0.01])
-                for i in range(knots):
-                    MBPWL_limits.append((0., 5.))
-                    errors.append(0.01)
-                m.limits = MBPWL_limits
-            elif fit_func_name == "PWL":
-                m.limits = ([(1e-7, 1e-3), (-2., 5.)])
-                errors = [1e-7, 0.01]
-            elif fit_func_name == "LP" or fit_func_name == "freeLP":
-                m.limits = ([(1e-7, 1e-3), (-2., 5.), (None, None)])
-                errors = [1e-7, 0.01, 0.01]
-            elif fit_func_name == "EPWL":
-                m.limits = ([(1e-7, 1e-3), (-2., 5.), (None, None)])
-                errors = [1e-8, 1.0, np.sqrt(500.)]
-            elif fit_func_name == "ELP":
-                m.limits = ([(1e-7, 1e-3), (-2., 5.), (None, None), (None, None)])
-                errors = [1e-8, 1., 0.1, np.sqrt(500.)]
-            elif fit_func_name == "SEPWL":
-                m.limits = ([(1e-7, 1e-3), (-2., 5.), (None, None), (None, None)])
-                errors = [1e-8, 1.0, np.sqrt(500.), 1.]
-            elif fit_func_name == "SELP":
-                m.limits = ([(1e-7, 1e-3), (-2., 5.), (None, None), (None, None), (None, None)])
-                errors = [1e-8, 1., 0.1, np.sqrt(500.), 0.1]
-            #TODO ADD other functions
-            #m.tol = 1e-6
-            #m.strategy = 2
-            m.errors = errors
+        #     m2LogL.errordef = Minuit.LIKELIHOOD
+        #     m = Minuit(m2LogL, initial_guess)
+        #     if fit_func_name == "MBPWL": #defines limits to faster and better find the minimum. Can be changed if the intrinsic spectrum function is changed.
+        #         MBPWL_limits = ([(1e-7, 1e-3), (-4., 5.)])
+        #         errors = ([1e-7, 0.01])
+        #         for i in range(knots):
+        #             MBPWL_limits.append((0., 5.))
+        #             errors.append(0.01)
+        #         m.limits = MBPWL_limits
+        #     elif fit_func_name == "PWL":
+        #         m.limits = ([(1e-7, 1e-3), (-2., 5.)])
+        #         errors = [1e-7, 0.01]
+        #     elif fit_func_name == "LP" or fit_func_name == "freeLP":
+        #         m.limits = ([(1e-7, 1e-3), (-2., 5.), (None, None)])
+        #         errors = [1e-7, 0.01, 0.01]
+        #     elif fit_func_name == "EPWL":
+        #         m.limits = ([(1e-7, 1e-3), (-2., 5.), (None, None)])
+        #         errors = [1e-8, 1.0, np.sqrt(500.)]
+        #     elif fit_func_name == "ELP":
+        #         m.limits = ([(1e-7, 1e-3), (-2., 5.), (None, None), (None, None)])
+        #         errors = [1e-8, 1., 0.1, np.sqrt(500.)]
+        #     elif fit_func_name == "SEPWL":
+        #         m.limits = ([(1e-7, 1e-3), (-2., 5.), (None, None), (None, None)])
+        #         errors = [1e-8, 1.0, np.sqrt(500.), 1.]
+        #     elif fit_func_name == "SELP":
+        #         m.limits = ([(1e-7, 1e-3), (-2., 5.), (None, None), (None, None), (None, None)])
+        #         errors = [1e-8, 1., 0.1, np.sqrt(500.), 0.1]
+        #     #TODO ADD other functions
+        #     #m.tol = 1e-6
+        #     #m.strategy = 2
+        #     m.errors = errors
             
-            m.migrad()
-            return m
+        #     m.migrad()
+        #     return m
 
     else:
         raise Exception('The simulated spectrum "{func}" has not been implemented.'.format(func = Spectrum_func_name))
@@ -370,6 +370,7 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
             #     continue
             dset = savefile.create_dataset("alphas", data = alphas, dtype='float')
             dset = savefile.create_dataset("chisqs", data = chisqs, dtype='float')
+            savefile.close()
 
         else:
             print("Use Forward Folding please")
