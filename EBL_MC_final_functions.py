@@ -44,7 +44,6 @@ def config_fit(fit_func_name):
         inp_config = yaml.safe_load(f)
     EBL_Model = inp_config["EBL_Model"]
     initial_guess_0 = inp_config["initial_guess_0"]
-    initial_guess_pos = inp_config["initial_guess_pos"]
     step = inp_config["step"]
     last_bin = inp_config["last_bin"]
     first_bin = inp_config["first_bin"]
@@ -59,7 +58,7 @@ def config_fit(fit_func_name):
         Efirst = 0.11
         DeltaE = 0.306
 
-    return EBL_Model, initial_guess_0, initial_guess_pos, step, last_bin, first_bin, knots, Efirst, DeltaE, Source_z
+    return EBL_Model, initial_guess_0, step, last_bin, first_bin, knots, Efirst, DeltaE, Source_z
 
 def chisq(obs, exp, error):
     return np.sum(np.square(obs - exp) / np.square(error))
@@ -268,7 +267,7 @@ def alphas_creation(initial_guess_pos, first_bin, last_bin, step):
     alphas1 = np.arange(initial_guess_pos + step, last_bin + step, step)
     alphas2 = np.arange(initial_guess_pos, first_bin - step, -step)
     alphas = np.append(alphas1, alphas2)
-    return np.round(alphas, decimals = 3)   
+    return np.round(alphas, decimals = 3)
 
 def ig_mat_create(fit_func_name, alphas, knots):
     if fit_func_name == "MBPWL":
@@ -594,6 +593,7 @@ def Gauss_logL_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions): #canviat per I
     diff = Non - Noff/Noffregions - mu_gam
     delta_exp = np.square(delta_mu_gam) + Noff/(Noffregions*Noffregions)
     delta_diff = Non + delta_exp
+    
     return np.square(diff)/delta_diff
 
 
