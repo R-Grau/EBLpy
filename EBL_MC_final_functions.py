@@ -36,7 +36,9 @@ def config_data(Spectrum_func_name):
     Ph_index = inp_config["Ph_index"]
     LP_curvature = inp_config["LP_curvature"]
     Source_z = inp_config["Source_z"]
-    return Source_flux, Observation_time, Background_scale, Norm, Ph_index, LP_curvature, Source_z, EBL_Model
+    E_cut = inp_config["E_cut"]
+    d = inp_config["d"]
+    return Source_flux, Observation_time, Background_scale, Norm, Ph_index, LP_curvature, E_cut, d, Source_z, EBL_Model
 
  
 def config_fit(fit_func_name):
@@ -68,6 +70,18 @@ def Gauss(E, A, mu, sigma):
 
 def Gauss_int(A, mu, sigma, Em, Ep):
     return quad(Gauss, Em, Ep, args=(A, mu, sigma)) #maybie some mistake here because of log scale
+
+def E_gaussian(x, mu, energyerror):
+    sigma = mu * energyerror
+    return 1/(sigma * np.sqrt(2 * np.pi)) * np.exp(-0.5 * ((x - mu)/sigma)**2)
+def E_gaussian_prod(x, mu, energyerror, mu_0):
+    return mu_0 * E_gaussian(x, mu, energyerror)
+
+def E_half_gaussian(x, mu, energyerror):
+    sigma = mu * energyerror
+    return 2 * 1/(sigma * np.sqrt(2 * np.pi)) * np.exp(-0.5 * ((x - mu)/sigma)**2) * (x <= mu)
+def E_half_gaussian_prod(x, mu, energyerror, mu_0):
+    return mu_0 * E_half_gaussian(x, mu, energyerror)
 
 
 def log_interp1d(E_before, y_before, E_after):
@@ -377,6 +391,23 @@ def dNdE_to_mu_MAGIC(dNdEa, Ebinw, migmatval, Eest):
     for i in range(len(Eest)):
         mu_vec_reco[i] = np.sum(mu_vec * migmatval[:,i])
     return mu_vec_reco
+
+def dNdE_to_mu_MAGIC_Eshift(dNdEa, Ebinw, migmatval, Eest, shift, seed, Etrue):
+    migmat2 = np.zeros(migmatval.shape)
+    np.random.seed(seed)
+    Ratio = Etrue[1]/Etrue[0]
+    migmat_shft_percent = np.abs(np.random.normal(.0, shift, migmat2[:,0].shape))
+    migmat_shft = (np.log(1+migmat_shft_percent)/np.log(Ratio)).astype(int)
+    for i, g in enumerate(migmat_shft):
+        if i-g < 0:
+            migmat2[i] = migmatval[i] * 0
+        else:
+            migmat2[i] = migmatval[i-g]
+    mu_vec = dNdEa * Ebinw 
+    mu_vec_reco = np.zeros(len(Eest))
+    for i in range(len(Eest)):#canviar index de manera aleatoria
+        mu_vec_reco[i] = np.sum(mu_vec * migmat2[:,i])
+    return mu_vec_reco
 ############################################IF using np.select#######################3
 # def best_mubg_mugam_IRF(Non, Noff, mu_gam, delta_mu_gam, Noffregions):
 #     def mu_gam_f(eps, mu_gam, delta_mu_gam):
@@ -540,6 +571,28 @@ def dNdE_to_mu_MAGIC_IRF(dNdEa, Ebinw, migmatval, migmaterr, Eest):
     mu_vec_reco_u = np.zeros(len(Eest))
     for i in range(len(Eest)):
         mu_vec_reco[i] = np.sum(mu_vec * migmatval[:,i])
+        mu_vec_reco_u[i] = np.sqrt(np.sum(mu_vec*mu_vec * np.square(migmaterr[:,i]))) #as mu_vec_u = 0
+    return mu_vec_reco, mu_vec_reco_u
+
+def dNdE_to_mu_MAGIC_IRF_Eshift(dNdEa, Ebinw, migmatval, migmaterr, Eest, shift, seed, Etrue): #no needed
+    migmat2 = np.zeros(migmatval.shape)
+    migmaterr2 = np.zeros(migmaterr.shape)
+    np.random.seed(seed)
+    Ratio = Etrue[1]/Etrue[0]
+    migmat_shft_percent = np.abs(np.random.normal(.0, shift, migmat2[:,0].shape))
+    migmat_shft = (np.log(1+migmat_shft_percent)/np.log(Ratio)).astype(int)
+    for i, g in enumerate(migmat_shft):
+        if i-g < 0:
+            migmat2[i] = migmatval[i] * 0
+            migmaterr2[i] = migmaterr[i] * 0
+        else:
+            migmat2[i] = migmatval[i-g]
+            migmaterr2[i] = migmaterr[i-g]
+    mu_vec = dNdEa * Ebinw 
+    mu_vec_reco = np.zeros(len(Eest))
+    mu_vec_reco_u = np.zeros(len(Eest))
+    for i in range(len(Eest)):#canviar index de manera aleatoria
+        mu_vec_reco[i] = np.sum(mu_vec * migmat2[:,i])
         mu_vec_reco_u[i] = np.sqrt(np.sum(mu_vec*mu_vec * np.square(migmaterr[:,i]))) #as mu_vec_u = 0
     return mu_vec_reco, mu_vec_reco_u
 
