@@ -28,7 +28,6 @@ def config_data(Spectrum_func_name):
     #fit_func_name = inp_config["fit_func_name"]
     
     #Spectrum_func_name = inp_config["Spectrum_func_name"]
-    EBL_Model = inp_config["EBL_Model"]
     Source_flux = inp_config["Source_flux"]
     Observation_time = inp_config["Observation_time"]
     Background_scale = inp_config["Background_scale"]
@@ -38,13 +37,15 @@ def config_data(Spectrum_func_name):
     Source_z = inp_config["Source_z"]
     E_cut = inp_config["E_cut"]
     d = inp_config["d"]
-    return Source_flux, Observation_time, Background_scale, Norm, Ph_index, LP_curvature, E_cut, d, Source_z, EBL_Model
+    EBL_Model_sim = inp_config["EBL_Model_sim"]
+
+    return Source_flux, Observation_time, Background_scale, Norm, Ph_index, LP_curvature, E_cut, d, Source_z, EBL_Model_sim
 
  
 def config_fit(fit_func_name):
     with open("{0}EBL_MC_config_fit_{1}.yml".format(pathstring, fit_func_name), "r") as f:
         inp_config = yaml.safe_load(f)
-    EBL_Model = inp_config["EBL_Model"]
+    EBL_Model_fit = inp_config["EBL_Model_fit"]
     initial_guess_0 = inp_config["initial_guess_0"]
     step = inp_config["step"]
     last_bin = inp_config["last_bin"]
@@ -60,7 +61,7 @@ def config_fit(fit_func_name):
         Efirst = 0.11
         DeltaE = 0.306
 
-    return EBL_Model, initial_guess_0, step, last_bin, first_bin, knots, Efirst, DeltaE, Source_z
+    return EBL_Model_fit, initial_guess_0, step, last_bin, first_bin, knots, Efirst, DeltaE, Source_z
 
 def chisq(obs, exp, error):
     return np.sum(np.square(obs - exp) / np.square(error))
@@ -102,7 +103,7 @@ def normal_interp1d(E_before, y_before, E_after):
     interpolated = interp_func(E_after)
     return interpolated
 
-def tau_interp(E_after, z_after, EBL_Model, kind_of_interp = "linear"):
+def tau_interp(E_after, z_after, EBL_Model, kind_of_interp = "linear"): #not used since adding ebltable (can still be used)
     if EBL_Model == "Dominguez":
 
         possible_z = np.array([0.01, 0.02526316, 0.04052632, 0.05578947, 0.07105263, 0.08631579, 0.10157895, 0.11684211, 0.13210526, 0.14736842, 0.16263158, 0.17789474, 0.19315789, 0.20842105, 0.22368421, 0.23894737, 0.25421053, 0.26947368, 0.28473684, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1., 1.2, 1.4, 1.6, 1.8, 2.])
@@ -114,6 +115,22 @@ def tau_interp(E_after, z_after, EBL_Model, kind_of_interp = "linear"):
         tau_matrix = np.zeros([len(possible_z), len(E_before)])
         for i in range(len(possible_z)):
             tau_matrix[i] = pdfile['tau z={0}'.format(possible_z[i])].to_numpy() #tau bins
+
+    elif EBL_Model == "Saldana":
+
+        file = np.loadtxt('{0}tau_saldana-lopez21.out'.format(pathstring))
+        possible_z = np.linspace(0.01, 6.00, 600)
+        possible_z_str = np.round(possible_z, decimals = 2).astype("str")
+        columns = np.insert(possible_z_str, 0, 'E [TeV]', axis = 0)
+        pdfile = pd.DataFrame(file, columns = columns)
+        E_before = pdfile['E [TeV]'].to_numpy()
+        tau_matrix = np.zeros([len(possible_z_str), len(E_before)])
+
+        for i in range(len(possible_z)):
+            tau_matrix[i] = pdfile['{0}'.format(possible_z_str[i])].to_numpy()
+
+        kind_of_interp = "linear"
+        
     else:
         raise Exception('The EBL model "{func}" has not been implemented.'.format(func = EBL_Model))        
 

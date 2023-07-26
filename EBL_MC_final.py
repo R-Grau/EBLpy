@@ -1,3 +1,6 @@
+#Before running this script you need to generate all the needed configuration files with the script "EBL_MC_final_config_creator.ipynb"
+#You need the general config, one config_data for every simulated spectra and one config_fit for every fit function
+
 import numpy as np
 import scipy as sc
 from iminuit import Minuit
@@ -16,23 +19,24 @@ import time
 import sys
 import os
 import uproot
+from ebltable.tau_from_model import OptDepth
 
-systematics = 0.07
-Eshift = False
-migmatshift = 0.15
-randomseed = int(sys.argv[1]) + 37
+systematics = 0.07 #Gaussian systematic errors to be added to the simulated data
+Syst = True #add systematics to the analysis
+Eshift = False #whether we want to add a shift on the Energy
+migmatshift = 0.15 #how much we want to shift the migration matrix (with gaussian probability) (useless when Eshift = False)
+randomseed = int(sys.argv[1]) #random seed for the simulation added as an argument when running the script
 
-Emin = 0.06
-Emax = 15.
-# Chain_guess = True
+Emin = 0.06  #minimum energy of the simulated data in TeV
+Emax = 20. #maximum energy of the simulated data in TeV
 scan_method = 5 # 0 for normal scanning, 1 for scanning and retryng failed fits, 2 for scanning and scanning again with another initial guess, 3 for scanning, retrying failed fits and 
                 #scanning again with another initial guess and 4 for doing every alpha by itself (no chained initial guess)
-initial_guess_pos = 2.05 #used in scan_method 0, 1, 2 and 3              
-other_initial_guess_position = -0.05 #this is only used scan_method = 2     
-migmatmaxu = 0.51
+initial_guess_pos = 2.05 #Position of the initial guess before the scan              
+other_initial_guess_position = -0.05 #this is only used scan_method = 2, 3 and 5     
+migmatmaxu = 0.51 #maximum value of the migration matrix uncertainty relative to the value (to discard points with few MC statistics)
 
-Extratxt = "FINAL_noeshift"
-pathstring = "/data/magic/users-ifae/rgrau/EBL-splines/"#"/home/rgrau/Desktop/EBL_pic_sync/"#"/data/magic/users-ifae/rgrau/EBL-splines/"
+Extratxt = "FINAL_with_syst_analysis_dominguez" #text to add to the name of the output files
+pathstring = "/data/magic/users-ifae/rgrau/EBL-splines/"#path where the data files are and where the output files will be saved
 
 #Load the general configuration file
 
@@ -42,7 +46,8 @@ Telescope, niter, Energy_migration, Forward_folding, IRF_u, Background, fit_n, S
 
 
 for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectrum functions
-    Source_flux, Observation_time, Background_scale, Norm, Ph_index, LP_curvature, E_cut, d, Source_z, EBL_Model = config_data(Spectrum_func_name)
+    #first load the configuration file for the intrinsic spectrum function
+    Source_flux, Observation_time, Background_scale, Norm, Ph_index, LP_curvature, E_cut, d, Source_z, EBL_Model_sim = config_data(Spectrum_func_name)
     
     if Spectrum_func_name == "PWL": #define the intrinsic spectrum if the function is a Power-Law
         def dNdE_absorbed(K, E, Norm, Ph_index, tau):
@@ -56,25 +61,27 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
             m_tau = -tau
             return dNdE * np.exp(m_tau)
         
-    elif Spectrum_func_name == "EPWL":
+    elif Spectrum_func_name == "EPWL": #define the intrinsic spectrum if the function is an Exponential cut-off Power-Law
         def dNdE_absorbed(K, E, Norm, Ph_index, E_cut, tau):
             dNdE = K / ((E/Norm)**Ph_index) * np.exp(-E/(E_cut*E_cut))
             m_tau = -tau
             return dNdE * np.exp(m_tau)
 
-    elif Spectrum_func_name == "ELP":
+    elif Spectrum_func_name == "ELP": #define the intrinsic spectrum if the function is an Exponential cut-off Log-Parabola
         def dNdE_absorbed(K, E, Norm, Ph_index, b, E_cut, tau):
             dNdE = K * np.power((E/Norm), (-Ph_index - b * b * np.log10(E/Norm))) * np.exp(-E / (E_cut * E_cut))
             m_tau = -tau
             return dNdE * np.exp(m_tau)
 
-    elif Spectrum_func_name == "SEPWL":
+    elif Spectrum_func_name == "SEPWL": #define the intrinsic spectrum if the function is a Super-Exponential cut-off Power-Law
         def dNdE_absorbed(K, E, Norm, Ph_index, E_cut, d, tau):
             dNdE = K / ((E/Norm)**Ph_index) * np.exp(-(E/(E_cut*E_cut)**d))
             m_tau = -tau
             return dNdE * np.exp(m_tau)
+    else:
+        raise Exception('The simulated spectrum "{func}" has not been implemented.'.format(func = Spectrum_func_name))
         
-#########################Maybie this can be moved before or later
+ #########################Maybie this can be moved before or later
     if Forward_folding:
         if Telescope == "CTAN_alpha":
             print("CTAN-alpha to be configured soon")
@@ -83,44 +90,20 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
             Noffregions = 3
             def m2LogL(params):
                 xdata = Etrue
-                mtau = -tau
+                mtau_fit = -tau_fit
                 if IRF_u:
-                    mu_gam, mu_gam_u = dNdE_to_mu_MAGIC_IRF((fit_func(xdata, params) * np.exp(mtau * alpha)), Ebinsw_Etrue, migmatval, migmaterr, Eest)
+                    mu_gam, mu_gam_u = dNdE_to_mu_MAGIC_IRF((fit_func(xdata, params) * np.exp(mtau_fit * alpha)), Ebinsw_Etrue, migmatval, migmaterr, Eest)
+                    if Syst:
+                        mu_gam_u = np.sqrt(mu_gam_u**2 + (mu_gam * systematics)**2)
                     mu_gam_final_u = mu_gam_u[minbin:maxbin]
 
                 else:
-                    mu_gam = dNdE_to_mu_MAGIC((fit_func(xdata, params) * np.exp(mtau * alpha)), Ebinsw_Etrue, migmatval, Eest)
+                    mu_gam = dNdE_to_mu_MAGIC((fit_func(xdata, params) * np.exp(mtau_fit * alpha)), Ebinsw_Etrue, migmatval, Eest)
 
                 mu_gam_final = mu_gam[minbin:maxbin]
                 Non_final = Non[minbin:maxbin] 
                 Noff_final = Noff[minbin:maxbin]
                 min_num_gauss = 20
-            #####OLD not optimized way of doing this###########
-                # if IRF_u:
-                #     conditions = [((Non_final >= min_num_gauss) & (Noff_final >= min_num_gauss)), #change conditions and choices for irf
-                #             (Non_final == 0.), 
-                #             (Noff_final == 0.),
-                #             (mu_gam_final < 1e-6),
-                #             (mu_gam_final_u == 0),
-                #             (Non_final != 0.) & (Noff_final != 0.)]
-                #     choices = [Gauss_logL_IRF(Non_final, Noff_final, mu_gam_final, mu_gam_final_u, Noffregions),
-                #             Poisson_logL_Non0_IRF(Non_final, Noff_final, mu_gam_final, mu_gam_final_u, Noffregions),
-                #             Poisson_logL_Noff0_IRF(Non_final, Noff_final, mu_gam_final, mu_gam_final_u, Noffregions),
-                #             Poisson_logL_small_mugam_IRF(Non_final, Noff_final, mu_gam_final, mu_gam_final_u, Noffregions),
-                #             Poisson_logL_noIRF_IRF(Non_final, Noff_final, mu_gam_final, mu_gam_final_u, Noffregions),
-                #             Poisson_logL_else_IRF(Non_final, Noff_final, mu_gam_final, mu_gam_final_u, Noffregions)]
-                # else:
-                #     conditions = [((Non_final >= min_num_gauss) & (Noff_final >= min_num_gauss)),
-                #             (Non_final == 0.), 
-                #             (Noff_final == 0.),
-                #             (Non_final != 0.) & (Noff_final != 0.)]
-                #     choices = [Gauss_logL(Non_final, Noff_final, mu_gam_final, Noffregions),
-                #             Poisson_logL_Non0(Non_final, Noff_final, mu_gam_final, Noffregions),
-                #             Poisson_logL_Noff0(Non_final, Noff_final, mu_gam_final, Noffregions),
-                #             Poisson_logL_else(Non_final, Noff_final, mu_gam_final, Noffregions)]
-                # res = np.select(conditions, choices, default = 999999999)
-                
-            #####NEW optimized way of doing this###########
 
                 res = np.ones(len(Non_final)) * 999999999
                 for i in range(len(Non_final)):
@@ -154,7 +137,7 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
             
             m2LogL.errordef = Minuit.LIKELIHOOD
             m = Minuit(m2LogL, initial_guess)
-            if fit_func_name == "MBPWL": #defines limits to faster and better find the minimum. Can be changed if the intrinsic spectrum function is changed.
+            if fit_func_name == "MBPWL": #defines limits to faster and better find the minimum. Can be changed if the convergence fails.
                 MBPWL_limits = ([(1e-6, 1e-3), (-4., 5.)])
                 errors = ([1e-7, 0.01])
                 for i in range(knots):
@@ -185,47 +168,8 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
             
             m.migrad()
             return m
-        
-        # def fit2(initial_guess):
-            
-        #     m2LogL.errordef = Minuit.LIKELIHOOD
-        #     m = Minuit(m2LogL, initial_guess)
-        #     if fit_func_name == "MBPWL": #defines limits to faster and better find the minimum. Can be changed if the intrinsic spectrum function is changed.
-        #         MBPWL_limits = ([(1e-7, 1e-3), (-4., 5.)])
-        #         errors = ([1e-7, 0.01])
-        #         for i in range(knots):
-        #             MBPWL_limits.append((0., 5.))
-        #             errors.append(0.01)
-        #         m.limits = MBPWL_limits
-        #     elif fit_func_name == "PWL":
-        #         m.limits = ([(1e-7, 1e-3), (-2., 5.)])
-        #         errors = [1e-7, 0.01]
-        #     elif fit_func_name == "LP" or fit_func_name == "freeLP":
-        #         m.limits = ([(1e-7, 1e-3), (-2., 5.), (None, None)])
-        #         errors = [1e-7, 0.01, 0.01]
-        #     elif fit_func_name == "EPWL":
-        #         m.limits = ([(1e-7, 1e-3), (-2., 5.), (None, None)])
-        #         errors = [1e-8, 1.0, np.sqrt(500.)]
-        #     elif fit_func_name == "ELP":
-        #         m.limits = ([(1e-7, 1e-3), (-2., 5.), (None, None), (None, None)])
-        #         errors = [1e-8, 1., 0.1, np.sqrt(500.)]
-        #     elif fit_func_name == "SEPWL":
-        #         m.limits = ([(1e-7, 1e-3), (-2., 5.), (None, None), (None, None)])
-        #         errors = [1e-8, 1.0, np.sqrt(500.), 1.]
-        #     elif fit_func_name == "SELP":
-        #         m.limits = ([(1e-7, 1e-3), (-2., 5.), (None, None), (None, None), (None, None)])
-        #         errors = [1e-8, 1., 0.1, np.sqrt(500.), 0.1]
-        #     #m.tol = 1e-6
-        #     #m.strategy = 2
-        #     m.errors = errors
-            
-        #     m.migrad()
-        #     return m
-
-    else:
-        raise Exception('The simulated spectrum "{func}" has not been implemented.'.format(func = Spectrum_func_name))
     
-################################################################
+ ################################################################
     
     if Telescope == "CTAN_alpha": 
         print("Not implemented yet")
@@ -252,24 +196,28 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
         maxbin = Usedbins[0][-1] + 1
         Eest_final = Eest[minbin:maxbin]
         
-        tau = tau_interp(Etrue, Source_z, EBL_Model, kind_of_interp = "log") #interpolate the tau values to have the same bins as the migration matrix and the data.
+        #tau_sim = tau_interp(Etrue, Source_z, EBL_Model_sim, kind_of_interp = "log") #old, before adding ebltable package #interpolate the tau values to have the same bins as the migration matrix and the data.
+        tau1 =  OptDepth.readmodel(model=EBL_Model_sim)
+        tau_sim = tau1.opt_depth(Source_z, Etrue) #interpolate the tau values to have the same bins as the migration matrix and the data.
+
+
         Ebinsw_final = migmatyEest[1:] - migmatyEest[:-1] #compute the bin width of the final energy bins
         Ebinsw_Etrue = migmatxEtrue[1:] - migmatxEtrue[:-1] #compute the bin width of Etrue energy bins
 
         if Spectrum_func_name == "PWL":
-            dNdEa = dNdE_absorbed(Source_flux, Etrue, Norm, Ph_index, tau) #use the previously defined dNdE function 
+            dNdEa = dNdE_absorbed(Source_flux, Etrue, Norm, Ph_index, tau_sim) #use the previously defined dNdE function 
 
         elif Spectrum_func_name == "LP":
-            dNdEa = dNdE_absorbed(Source_flux, Etrue, Norm, Ph_index, LP_curvature, tau) #use the previously defined dNdE function 
+            dNdEa = dNdE_absorbed(Source_flux, Etrue, Norm, Ph_index, LP_curvature, tau_sim) #use the previously defined dNdE function 
 
         elif Spectrum_func_name == "EPWL":
-            dNdEa = dNdE_absorbed(Source_flux, Etrue, Norm, Ph_index, E_cut, tau) #use the previously defined dNdE function
+            dNdEa = dNdE_absorbed(Source_flux, Etrue, Norm, Ph_index, E_cut, tau_sim) #use the previously defined dNdE function
 
         elif Spectrum_func_name == "ELP":
-            dNdEa = dNdE_absorbed(Source_flux, Etrue, Norm, Ph_index, LP_curvature, E_cut, tau) #use the previously defined dNdE function
+            dNdEa = dNdE_absorbed(Source_flux, Etrue, Norm, Ph_index, LP_curvature, E_cut, tau_sim) #use the previously defined dNdE function
 
         elif Spectrum_func_name == "SEPWL":
-            dNdEa = dNdE_absorbed(Source_flux, Etrue, Norm, Ph_index, E_cut, d, tau) #use the previously defined dNdE function
+            dNdEa = dNdE_absorbed(Source_flux, Etrue, Norm, Ph_index, E_cut, d, tau_sim) #use the previously defined dNdE function
 
 
         if Eshift:
@@ -287,8 +235,11 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
         
     for fit_func_name in fit_n: #loop over the different fit functions
         print("Starting function {func} for iter {iter}".format(func = fit_func_name, iter = iter))
-        EBL_Model, initial_guess_0, step, true_alpha_max, true_alpha_min, knots, Efirst, DeltaE, Source_z = config_fit(fit_func_name)
-   
+        EBL_Model_fit, initial_guess_0, step, true_alpha_max, true_alpha_min, knots, Efirst, DeltaE, Source_z = config_fit(fit_func_name)
+        #tau_fit = tau_interp(Etrue, Source_z, EBL_Model_fit, kind_of_interp = "log")
+        tau2 =  OptDepth.readmodel(model=EBL_Model_fit)
+        tau_fit = tau2.opt_depth(Source_z, Etrue)
+
         first_bin = true_alpha_min - step 
         last_bin = true_alpha_max + step
 
