@@ -41,6 +41,8 @@ pathstring = "/data/magic/users-ifae/rgrau/EBL-splines/"#path where the data fil
 #Load the general configuration file
 
 Telescope, niter, Energy_migration, Forward_folding, IRF_u, Background, fit_n, Spectrum_fn = general_config()
+if Telescope == "LST-1":
+    IRF_u = False
 
 #Now first we create the data for every intrinsic spectrum function and for every intrinsic spectrum we will fit the different fit functions
 
@@ -86,7 +88,7 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
         if Telescope == "CTAN_alpha":
             print("CTAN-alpha to be configured soon")
                 
-        elif Telescope == "MAGIC":
+        elif (Telescope == "MAGIC" or Telescope == "LST-1"):
             Noffregions = 3
             def m2LogL(params):
                 xdata = Etrue
@@ -225,8 +227,60 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
         else:
             mu_vec_final = dNdE_to_mu_MAGIC(dNdEa, Ebinsw_Etrue, migmatval, Eest) #get the dNdE to the needed mu values for the likelihood.
 
+    elif Telescope == "LST-1": #Simulate the LST-1 data
+        lst_data_str = "/nfs/pic.es/user/r/rgrauhar/rgrau/EBL-splines/LST-1_migmat_data/"
+        bckgmu_final = np.loadtxt("{0}background.txt".format(lst_data_str))
+
+        migmatval = np.loadtxt("{0}migmatval.txt".format(lst_data_str)) #m^2 * s #values
+
+        #no migmaterr for LST-1
+
+        # if IRF_u:             
+        #     migmaterr = migrmatrix.errors()
+        #     migmatval[(migmaterr/migmatval)>migmatmaxu] = 0
+        #     migmaterr[(migmaterr/migmatval)>migmatmaxu] = 0
+        migmatxEtrue = np.loadtxt("{0}migmatxEtrue.txt".format(lst_data_str))/1e3 #TeV #edge values of X axis of the migration matrix (True Energy)
+        migmatyEest = np.loadtxt("{0}migmatyEest.txt".format(lst_data_str))/1e3 #TeV #edge values of Y axis of the migration matrix (Estimated Energy)
+
+        Eest = np.loadtxt("{0}Eest".format(lst_data_str))/1e3 #TeV #center values of X axis of the migration matrix (True Energy)
+        Etrue = np.loadtxt("{0}Etrue".format(lst_data_str))/1e3 #TeV #center values of Y axis of the migration matrix (Estimated Energy)
+        E_final = Etrue
+        Usedbins = np.where((Emin <= Eest) & (Eest <= Emax))
+        minbin = Usedbins[0][0]
+        maxbin = Usedbins[0][-1] + 1
+        Eest_final = Eest[minbin:maxbin]
+        
+        #tau_sim = tau_interp(Etrue, Source_z, EBL_Model_sim, kind_of_interp = "log") #old, before adding ebltable package #interpolate the tau values to have the same bins as the migration matrix and the data.
+        tau1 =  OptDepth.readmodel(model=EBL_Model_sim)
+        tau_sim = tau1.opt_depth(Source_z, Etrue) #interpolate the tau values to have the same bins as the migration matrix and the data.
+
+
+        Ebinsw_final = migmatyEest[1:] - migmatyEest[:-1] #compute the bin width of the final energy bins
+        Ebinsw_Etrue = migmatxEtrue[1:] - migmatxEtrue[:-1] #compute the bin width of Etrue energy bins
+
+        if Spectrum_func_name == "PWL":
+            dNdEa = dNdE_absorbed(Source_flux, Etrue, Norm, Ph_index, tau_sim) #use the previously defined dNdE function 
+
+        elif Spectrum_func_name == "LP":
+            dNdEa = dNdE_absorbed(Source_flux, Etrue, Norm, Ph_index, LP_curvature, tau_sim) #use the previously defined dNdE function 
+
+        elif Spectrum_func_name == "EPWL":
+            dNdEa = dNdE_absorbed(Source_flux, Etrue, Norm, Ph_index, E_cut, tau_sim) #use the previously defined dNdE function
+
+        elif Spectrum_func_name == "ELP":
+            dNdEa = dNdE_absorbed(Source_flux, Etrue, Norm, Ph_index, LP_curvature, E_cut, tau_sim) #use the previously defined dNdE function
+
+        elif Spectrum_func_name == "SEPWL":
+            dNdEa = dNdE_absorbed(Source_flux, Etrue, Norm, Ph_index, E_cut, d, tau_sim) #use the previously defined dNdE function
+
+
+        if Eshift:
+            mu_vec_final = dNdE_to_mu_MAGIC_Eshift(dNdEa, Ebinsw_Etrue, migmatval, Eest, migmatshift, randomseed, Etrue) #get the dNdE to the needed mu values for the likelihood.
+        else:
+            mu_vec_final = dNdE_to_mu_MAGIC(dNdEa, Ebinsw_Etrue, migmatval, Eest) #get the dNdE to the needed mu values for the likelihood.
+
     else:
-        raise Exception('The telescope "{func}" has not been implemented.'.format(func = Telescope))
+        raise Exception('The telescope "{tel}" has not been implemented.'.format(tel = Telescope))
 
 
     xdata = E_final
