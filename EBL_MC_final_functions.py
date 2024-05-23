@@ -4,6 +4,7 @@ from scipy.integrate import quad
 from scipy.stats import poisson, norm
 import pandas as pd
 import yaml
+from ebltable.tau_from_model import OptDepth
 
 pathstring = "/data/magic/users-ifae/rgrau/EBL-splines/"#"/home/rgrau/Desktop/EBL_pic_sync/"#"/data/magic/users-ifae/rgrau/EBL-splines/"
 Norm = 0.25 #normalization energy in TeV
@@ -695,3 +696,73 @@ def Gauss_logL(Non, Noff, mu_gam, Noffregions):
 def find_z(possible_z, source_z):
     idx = np.argmin(np.abs(possible_z - source_z))
     return possible_z[idx]
+
+#Concave EBL method functions:
+
+def find_tg_crossing(energy, logE, logemtau):
+    """
+    Find where the tangent of the curve of logemtau at energy cuts the loemtau curve
+
+    Parameters 
+    ----------
+    energy : float
+        Energy where we want to compute the concave EBL in TeV
+    logE : array_like
+        Logarithm of the energy where we want to compute the concave EBL in TeV
+    logemtau : array_like
+        Logarithm of the exponential of the optical depth
+    """
+    tck = interpolate.splrep(logE, logemtau)
+    x0 = np.log10(energy)
+    y0 = interpolate.splev(x0,tck)
+    dydx = interpolate.splev(x0,tck,der=1)
+    f = interpolate.splev(logE,tck)
+    g = dydx*(logE-x0) + y0
+    idx = np.argwhere(np.diff(np.sign(f - g))).flatten()
+    return idx
+
+def EBL_concave(Energy, z, EBL_Model):
+    """
+    Uses an EBL model optical depth at a certain redshift to make an EBL optical depth which has no inflection point (concave).
+
+    Parameters
+    ----------
+    Energy : array_like
+        Energy where we want to compute the concave EBL in TeV
+    z : float
+        Redshift of the source
+    EBL_Model : str
+        EBL model to use for the optical depth (see ebltable documentation for more info)  
+    """
+    tau1 =  OptDepth.readmodel(model=EBL_Model)
+    tau_sim = tau1.opt_depth(z, Energy)
+
+    logE = np.log10(Energy)
+    logemtau = (-tau_sim)/np.log(10)
+
+    tck = interpolate.splrep(logE, logemtau)
+
+    testsEs = np.geomspace(0.1, 10, 1000)
+    for i, E in enumerate(testsEs):
+        cross = find_tg_crossing(E, logE, logemtau)
+        if (len(cross) > 0):
+            if ((cross[1] - cross[0] > 2) & (Energy[cross[0]] > 1.)):
+                break
+
+    Etg1 = testsEs[i-1]
+    Etg2 = 10**logE[int(np.around(np.mean((cross[0], cross[1]))))]
+    tck = interpolate.splrep(logE,logemtau)
+    x0 = np.log10(Etg1)
+    x1 = logE[int(np.around(np.mean((cross[0], cross[1]))))]
+    y0 = interpolate.splev(x0,tck)
+    y1 = interpolate.splev(x1,tck)
+    dydx = (y1 - y0) / (x1 - x0)   #interpolate.splev(x0,tck,der=1)
+    tngnt = lambda x: dydx*x + (y0-dydx*x0)
+
+    concavetau = np.exp(-tau_sim)
+
+    tangentvalues = (10**tngnt(logE[np.where((Energy<Etg2) & (Energy>Etg1))]))
+    concavetau[np.where((Energy<Etg2) & (Energy>Etg1))] = tangentvalues
+
+    concavetau = -np.log(concavetau)
+    return concavetau

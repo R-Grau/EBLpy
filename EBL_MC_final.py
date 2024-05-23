@@ -21,8 +21,10 @@ import os
 import uproot
 from ebltable.tau_from_model import OptDepth
 
-systematics = 0.07 #Gaussian systematic errors to be added to the simulated data
-Syst = True #add systematics to the analysis
+concave_EBL = False
+
+systematics = 0.00 #Gaussian systematic errors to be added to the simulated data
+Syst = False #add systematics to the analysis
 Eshift = False #whether we want to add a shift on the Energy
 migmatshift = 0.15 #how much we want to shift the migration matrix (with gaussian probability) (useless when Eshift = False)
 randomseed = int(sys.argv[1]) #random seed for the simulation added as an argument when running the script
@@ -35,13 +37,15 @@ initial_guess_pos = 2.05 #Position of the initial guess before the scan
 other_initial_guess_position = -0.05 #this is only used scan_method = 2, 3 and 5     
 migmatmaxu = 0.51 #maximum value of the migration matrix uncertainty relative to the value (to discard points with few MC statistics)
 
-Extratxt = "FINAL_with_syst_analysis_dominguez" #text to add to the name of the output files
+Extratxt = "BOAT_2nd_phase" #text to add to the name of the output files
 pathstring = "/data/magic/users-ifae/rgrau/EBL-splines/"#path where the data files are and where the output files will be saved
 
 #Load the general configuration file
 
 Telescope, niter, Energy_migration, Forward_folding, IRF_u, Background, fit_n, Spectrum_fn = general_config()
-if Telescope == "LST-1":
+if Telescope == "CTAN_alpha":
+    migmat_time = 0.5*60*60
+if (Telescope == "LST-1" or Telescope == "CTAN_alpha"):
     IRF_u = False
 
 #Now first we create the data for every intrinsic spectrum function and for every intrinsic spectrum we will fit the different fit functions
@@ -85,22 +89,28 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
         
  #########################Maybie this can be moved before or later
     if Forward_folding:
-        if Telescope == "CTAN_alpha":
-            print("CTAN-alpha to be configured soon")
                 
-        elif (Telescope == "MAGIC" or Telescope == "LST-1"):
+        if (Telescope == "MAGIC" or Telescope == "LST-1" or Telescope == "CTAN_alpha"):
             Noffregions = 3
             def m2LogL(params):
                 xdata = Etrue
                 mtau_fit = -tau_fit
                 if IRF_u:
-                    mu_gam, mu_gam_u = dNdE_to_mu_MAGIC_IRF((fit_func(xdata, params) * np.exp(mtau_fit * alpha)), Ebinsw_Etrue, migmatval, migmaterr, Eest)
+                    if concave_EBL:
+                        mconcavetau = -concavetau
+                        mu_gam, mu_gam_u = dNdE_to_mu_MAGIC_IRF((fit_func(xdata, params) * np.exp(mconcavetau) * np.exp(alpha * (concavetau - tau_fit))), Ebinsw_Etrue, migmatval, migmaterr, Eest)  
+                    else:    
+                        mu_gam, mu_gam_u = dNdE_to_mu_MAGIC_IRF((fit_func(xdata, params) * np.exp(mtau_fit * alpha)), Ebinsw_Etrue, migmatval, migmaterr, Eest)
                     if Syst:
                         mu_gam_u = np.sqrt(mu_gam_u**2 + (mu_gam * systematics)**2)
                     mu_gam_final_u = mu_gam_u[minbin:maxbin]
 
                 else:
-                    mu_gam = dNdE_to_mu_MAGIC((fit_func(xdata, params) * np.exp(mtau_fit * alpha)), Ebinsw_Etrue, migmatval, Eest)
+                    if concave_EBL:
+                        mconcavetau = -concavetau
+                        mu_gam = dNdE_to_mu_MAGIC((fit_func(xdata, params) * np.exp(mconcavetau) * np.exp(alpha * (concavetau - tau_fit))), Ebinsw_Etrue, migmatval, Eest)
+                    else:
+                        mu_gam = dNdE_to_mu_MAGIC((fit_func(xdata, params) * np.exp(mtau_fit * alpha)), Ebinsw_Etrue, migmatval, Eest)
 
                 mu_gam_final = mu_gam[minbin:maxbin]
                 Non_final = Non[minbin:maxbin] 
@@ -173,10 +183,7 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
     
  ################################################################
     
-    if Telescope == "CTAN_alpha": 
-        print("Not implemented yet")
-
-    elif Telescope == "MAGIC": #Simulate the MAGIC data
+    if Telescope == "MAGIC": #Simulate the MAGIC data
         
         Bckg = uproot.open("{0}Output_flute.root:hEstBckgE".format(pathstring))#load background values
         bckgmu_final = Bckg.values() #counts in 42480s (can be normalized for any time but as the migmatrix is for that time, only use that time).
@@ -200,7 +207,7 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
         
         #tau_sim = tau_interp(Etrue, Source_z, EBL_Model_sim, kind_of_interp = "log") #old, before adding ebltable package #interpolate the tau values to have the same bins as the migration matrix and the data.
         tau1 =  OptDepth.readmodel(model=EBL_Model_sim)
-        tau_sim = tau1.opt_depth(Source_z, Etrue) #interpolate the tau values to have the same bins as the migration matrix and the data.
+        tau_sim = tau1.opt_depth(Source_z, Etrue) #interpolate the tau values to have the same bins as the migration matrix and the data
 
 
         Ebinsw_final = migmatyEest[1:] - migmatyEest[:-1] #compute the bin width of the final energy bins
@@ -227,23 +234,52 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
         else:
             mu_vec_final = dNdE_to_mu_MAGIC(dNdEa, Ebinsw_Etrue, migmatval, Eest) #get the dNdE to the needed mu values for the likelihood.
 
-    elif Telescope == "LST-1": #Simulate the LST-1 data
-        lst_data_str = "/nfs/pic.es/user/r/rgrauhar/rgrau/EBL-splines/LST-1_migmat_data/"
-        bckgmu_final = np.loadtxt("{0}background.txt".format(lst_data_str))
+    elif (Telescope == "LST-1" or Telescope == "CTAN_alpha"): #Simulate the LST-1/CTA-N data
+        
+        if Telescope == "LST-1":
+            lst_data_str = "/nfs/pic.es/user/r/rgrauhar/rgrau/EBL-splines/LST-1_migmat_data/"
+            bckgmu_final = np.loadtxt("{0}background.txt".format(lst_data_str))
 
-        migmatval = np.loadtxt("{0}migmatval.txt".format(lst_data_str)) #m^2 * s #values
+            migmatval = np.loadtxt("{0}migmatval.txt".format(lst_data_str)) #m^2 * s #values
+            
+            migmatxEtrue = np.loadtxt("{0}migmatxEtrue.txt".format(lst_data_str))/1e3 #TeV #edge values of X axis of the migration matrix (True Energy)
+            migmatyEest = np.loadtxt("{0}migmatyEest.txt".format(lst_data_str))/1e3 #TeV #edge values of Y axis of the migration matrix (Estimated Energy)
 
-        #no migmaterr for LST-1
+            Eest = np.loadtxt("{0}Eest.txt".format(lst_data_str))/1e3 #TeV #center values of X axis of the migration matrix (True Energy)
+            Etrue = np.loadtxt("{0}Etrue.txt".format(lst_data_str))/1e3 #TeV #center values of Y axis of the migration matrix (Estimated Energy)
+        
+        
+        elif Telescope == "CTAN_alpha":
+            lst_data_str = "/nfs/pic.es/user/r/rgrauhar/rgrau/EBL-splines/CTA-N_migmat_data/"
+            if migmat_time < 2*60*60:
+                
+                bckgmu_final = np.loadtxt("{0}background_0.5h.txt".format(lst_data_str))
 
-        # if IRF_u:             
-        #     migmaterr = migrmatrix.errors()
-        #     migmatval[(migmaterr/migmatval)>migmatmaxu] = 0
-        #     migmaterr[(migmaterr/migmatval)>migmatmaxu] = 0
-        migmatxEtrue = np.loadtxt("{0}migmatxEtrue.txt".format(lst_data_str))/1e3 #TeV #edge values of X axis of the migration matrix (True Energy)
-        migmatyEest = np.loadtxt("{0}migmatyEest.txt".format(lst_data_str))/1e3 #TeV #edge values of Y axis of the migration matrix (Estimated Energy)
+                migmatval = np.loadtxt("{0}migmatval_0.5h.txt".format(lst_data_str)) #m^2 * s #values
+                
+                migmatxEtrue = np.loadtxt("{0}migmatxEtrue_0.5h.txt".format(lst_data_str))/1e3 #TeV #edge values of X axis of the migration matrix (True Energy)
+                migmatyEest = np.loadtxt("{0}migmatyEest_0.5h.txt".format(lst_data_str))/1e3 #TeV #edge values of Y axis of the migration matrix (Estimated Energy)
 
-        Eest = np.loadtxt("{0}Eest".format(lst_data_str))/1e3 #TeV #center values of X axis of the migration matrix (True Energy)
-        Etrue = np.loadtxt("{0}Etrue".format(lst_data_str))/1e3 #TeV #center values of Y axis of the migration matrix (Estimated Energy)
+                Eest = np.loadtxt("{0}Eest_0.5h.txt".format(lst_data_str))/1e3 #TeV #center values of X axis of the migration matrix (True Energy)
+                Etrue = np.loadtxt("{0}Etrue_0.5h.txt".format(lst_data_str))/1e3 #TeV #center values of Y axis of the migration matrix (Estimated Energy)
+                
+            else: #add 5h
+                bckgmu_final = np.loadtxt("{0}background.txt".format(lst_data_str))
+
+                migmatval = np.loadtxt("{0}migmatval.txt".format(lst_data_str)) #m^2 * s #values
+                
+                migmatxEtrue = np.loadtxt("{0}migmatxEtrue.txt".format(lst_data_str))/1e3 #TeV #edge values of X axis of the migration matrix (True Energy)
+                migmatyEest = np.loadtxt("{0}migmatyEest.txt".format(lst_data_str))/1e3 #TeV #edge values of Y axis of the migration matrix (Estimated Energy)
+
+                Eest = np.loadtxt("{0}Eest.txt".format(lst_data_str))/1e3 #TeV #center values of X axis of the migration matrix (True Energy)
+                Etrue = np.loadtxt("{0}Etrue.txt".format(lst_data_str))/1e3 #TeV #center values of Y axis of the migration matrix (Estimated Energy)
+        
+        
+            bckgmu_final = bckgmu_final * Observation_time / migmat_time
+            migmatval = migmatval * Observation_time / migmat_time
+
+            
+            
         E_final = Etrue
         Usedbins = np.where((Emin <= Eest) & (Eest <= Emax))
         minbin = Usedbins[0][0]
@@ -293,6 +329,9 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
         #tau_fit = tau_interp(Etrue, Source_z, EBL_Model_fit, kind_of_interp = "log")
         tau2 =  OptDepth.readmodel(model=EBL_Model_fit)
         tau_fit = tau2.opt_depth(Source_z, Etrue)
+        if concave_EBL:
+            concavetau = EBL_concave(Etrue, Source_z, EBL_Model_fit)
+
 
         first_bin = true_alpha_min - step 
         last_bin = true_alpha_max + step
