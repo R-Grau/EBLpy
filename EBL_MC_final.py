@@ -37,14 +37,14 @@ initial_guess_pos = 2.05 #Position of the initial guess before the scan
 other_initial_guess_position = -0.05 #this is only used scan_method = 2, 3 and 5     
 migmatmaxu = 0.51 #maximum value of the migration matrix uncertainty relative to the value (to discard points with few MC statistics)
 
-Extratxt = "BOAT_2nd_phase" #text to add to the name of the output files
+Extratxt = "1ES1011_CTA_newIRF" #text to add to the name of the output files
 pathstring = "/data/magic/users-ifae/rgrau/EBL-splines/"#path where the data files are and where the output files will be saved
 
 #Load the general configuration file
 
 Telescope, niter, Energy_migration, Forward_folding, IRF_u, Background, fit_n, Spectrum_fn = general_config()
 if Telescope == "CTAN_alpha":
-    migmat_time = 0.5*60*60
+    migmat_time = 50*60*60
 if (Telescope == "LST-1" or Telescope == "CTAN_alpha"):
     IRF_u = False
 
@@ -251,7 +251,7 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
         
         elif Telescope == "CTAN_alpha":
             lst_data_str = "/nfs/pic.es/user/r/rgrauhar/rgrau/EBL-splines/CTA-N_migmat_data/"
-            if migmat_time < 2*60*60:
+            if migmat_time == 0.5*60*60:
                 
                 bckgmu_final = np.loadtxt("{0}background_0.5h.txt".format(lst_data_str))
 
@@ -263,16 +263,27 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
                 Eest = np.loadtxt("{0}Eest_0.5h.txt".format(lst_data_str))/1e3 #TeV #center values of X axis of the migration matrix (True Energy)
                 Etrue = np.loadtxt("{0}Etrue_0.5h.txt".format(lst_data_str))/1e3 #TeV #center values of Y axis of the migration matrix (Estimated Energy)
                 
-            else: #add 5h
-                bckgmu_final = np.loadtxt("{0}background.txt".format(lst_data_str))
+            elif migmat_time == 5*60*60: 
+                bckgmu_final = np.loadtxt("{0}background_5h.txt".format(lst_data_str))
 
-                migmatval = np.loadtxt("{0}migmatval.txt".format(lst_data_str)) #m^2 * s #values
+                migmatval = np.loadtxt("{0}migmatval_5h.txt".format(lst_data_str)) #m^2 * s #values
                 
-                migmatxEtrue = np.loadtxt("{0}migmatxEtrue.txt".format(lst_data_str))/1e3 #TeV #edge values of X axis of the migration matrix (True Energy)
-                migmatyEest = np.loadtxt("{0}migmatyEest.txt".format(lst_data_str))/1e3 #TeV #edge values of Y axis of the migration matrix (Estimated Energy)
+                migmatxEtrue = np.loadtxt("{0}migmatxEtrue_5h.txt".format(lst_data_str))/1e3 #TeV #edge values of X axis of the migration matrix (True Energy)
+                migmatyEest = np.loadtxt("{0}migmatyEest_5h.txt".format(lst_data_str))/1e3 #TeV #edge values of Y axis of the migration matrix (Estimated Energy)
 
-                Eest = np.loadtxt("{0}Eest.txt".format(lst_data_str))/1e3 #TeV #center values of X axis of the migration matrix (True Energy)
-                Etrue = np.loadtxt("{0}Etrue.txt".format(lst_data_str))/1e3 #TeV #center values of Y axis of the migration matrix (Estimated Energy)
+                Eest = np.loadtxt("{0}Eest_5h.txt".format(lst_data_str))/1e3 #TeV #center values of X axis of the migration matrix (True Energy)
+                Etrue = np.loadtxt("{0}Etrue_5h.txt".format(lst_data_str))/1e3 #TeV #center values of Y axis of the migration matrix (Estimated Energy)
+
+            elif migmat_time == 50*60*60: 
+                bckgmu_final = np.loadtxt("{0}background50h.txt".format(lst_data_str))
+
+                migmatval = np.loadtxt("{0}migmatval_50h.txt".format(lst_data_str)) #m^2 * s #values
+                
+                migmatxEtrue = np.loadtxt("{0}migmatxEtrue_50h.txt".format(lst_data_str))/1e3 #TeV #edge values of X axis of the migration matrix (True Energy)
+                migmatyEest = np.loadtxt("{0}migmatyEest_50h.txt".format(lst_data_str))/1e3 #TeV #edge values of Y axis of the migration matrix (Estimated Energy)
+
+                Eest = np.loadtxt("{0}Eest_50h.txt".format(lst_data_str))/1e3 #TeV #center values of X axis of the migration matrix (True Energy)
+                Etrue = np.loadtxt("{0}Etrue_50h.txt".format(lst_data_str))/1e3 #TeV #center values of Y axis of the migration matrix (Estimated Energy)
         
         
             bckgmu_final = bckgmu_final * Observation_time / migmat_time
