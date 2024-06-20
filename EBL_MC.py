@@ -1,27 +1,18 @@
-#Before running this script you need to generate all the needed configuration files with the script "EBL_MC_final_config_creator.ipynb"
+#Before running this script you need to generate all the needed configuration files with the script "EBL_MC_config_creator.ipynb"
 #You need the general config, one config_data for every simulated spectra and one config_fit for every fit function
 
 import numpy as np
-import scipy as sc
 from iminuit import Minuit
-import pandas as pd
-import scipy.interpolate as interpolate
-from scipy.integrate import quad
-from matplotlib import colors
-from EBL_MC_final_functions import *
-from scipy.stats import norm
-from scipy.stats import poisson
-from joblib import Parallel, delayed
-import yaml
-import matplotlib.pyplot as plt
+from EBL_MC_functions import *
 import h5py
 import time
 import sys
 import os
 import uproot
 from ebltable.tau_from_model import OptDepth
+from pathlib import Path
 
-concave_EBL = False
+concave_EBL = False #wether you want to use the "concave EBL" method or the regular one.
 
 systematics = 0.00 #Gaussian systematic errors to be added to the simulated data
 Syst = False #add systematics to the analysis
@@ -38,7 +29,8 @@ other_initial_guess_position = -0.05 #this is only used scan_method = 2, 3 and 5
 migmatmaxu = 0.51 #maximum value of the migration matrix uncertainty relative to the value (to discard points with few MC statistics)
 
 Extratxt = "1ES1011_CTA_newIRF" #text to add to the name of the output files
-pathstring = "/data/magic/users-ifae/rgrau/EBL-splines/"#path where the data files are and where the output files will be saved
+file_location = Path(__file__).resolve().parent
+pathstring = str(file_location) + "/" #path where the data files are and where the output files will be saved
 
 #Load the general configuration file
 
@@ -98,9 +90,9 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
                 if IRF_u:
                     if concave_EBL:
                         mconcavetau = -concavetau
-                        mu_gam, mu_gam_u = dNdE_to_mu_MAGIC_IRF((fit_func(xdata, params) * np.exp(mconcavetau) * np.exp(alpha * (concavetau - tau_fit))), Ebinsw_Etrue, migmatval, migmaterr, Eest)  
+                        mu_gam, mu_gam_u = dNdE_to_mu_IRF((fit_func(xdata, params) * np.exp(mconcavetau) * np.exp(alpha * (concavetau - tau_fit))), Ebinsw_Etrue, migmatval, migmaterr, Eest)  
                     else:    
-                        mu_gam, mu_gam_u = dNdE_to_mu_MAGIC_IRF((fit_func(xdata, params) * np.exp(mtau_fit * alpha)), Ebinsw_Etrue, migmatval, migmaterr, Eest)
+                        mu_gam, mu_gam_u = dNdE_to_mu_IRF((fit_func(xdata, params) * np.exp(mtau_fit * alpha)), Ebinsw_Etrue, migmatval, migmaterr, Eest)
                     if Syst:
                         mu_gam_u = np.sqrt(mu_gam_u**2 + (mu_gam * systematics)**2)
                     mu_gam_final_u = mu_gam_u[minbin:maxbin]
@@ -108,9 +100,9 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
                 else:
                     if concave_EBL:
                         mconcavetau = -concavetau
-                        mu_gam = dNdE_to_mu_MAGIC((fit_func(xdata, params) * np.exp(mconcavetau) * np.exp(alpha * (concavetau - tau_fit))), Ebinsw_Etrue, migmatval, Eest)
+                        mu_gam = dNdE_to_mu((fit_func(xdata, params) * np.exp(mconcavetau) * np.exp(alpha * (concavetau - tau_fit))), Ebinsw_Etrue, migmatval, Eest)
                     else:
-                        mu_gam = dNdE_to_mu_MAGIC((fit_func(xdata, params) * np.exp(mtau_fit * alpha)), Ebinsw_Etrue, migmatval, Eest)
+                        mu_gam = dNdE_to_mu((fit_func(xdata, params) * np.exp(mtau_fit * alpha)), Ebinsw_Etrue, migmatval, Eest)
 
                 mu_gam_final = mu_gam[minbin:maxbin]
                 Non_final = Non[minbin:maxbin] 
@@ -205,7 +197,6 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
         maxbin = Usedbins[0][-1] + 1
         Eest_final = Eest[minbin:maxbin]
         
-        #tau_sim = tau_interp(Etrue, Source_z, EBL_Model_sim, kind_of_interp = "log") #old, before adding ebltable package #interpolate the tau values to have the same bins as the migration matrix and the data.
         tau1 =  OptDepth.readmodel(model=EBL_Model_sim)
         tau_sim = tau1.opt_depth(Source_z, Etrue) #interpolate the tau values to have the same bins as the migration matrix and the data
 
@@ -230,14 +221,14 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
 
 
         if Eshift:
-            mu_vec_final = dNdE_to_mu_MAGIC_Eshift(dNdEa, Ebinsw_Etrue, migmatval, Eest, migmatshift, randomseed, Etrue) #get the dNdE to the needed mu values for the likelihood.
+            mu_vec_final = dNdE_to_mu_Eshift(dNdEa, Ebinsw_Etrue, migmatval, Eest, migmatshift, randomseed, Etrue) #get the dNdE to the needed mu values for the likelihood.
         else:
-            mu_vec_final = dNdE_to_mu_MAGIC(dNdEa, Ebinsw_Etrue, migmatval, Eest) #get the dNdE to the needed mu values for the likelihood.
+            mu_vec_final = dNdE_to_mu(dNdEa, Ebinsw_Etrue, migmatval, Eest) #get the dNdE to the needed mu values for the likelihood.
 
     elif (Telescope == "LST-1" or Telescope == "CTAN_alpha"): #Simulate the LST-1/CTA-N data
         
         if Telescope == "LST-1":
-            lst_data_str = "/nfs/pic.es/user/r/rgrauhar/rgrau/EBL-splines/LST-1_migmat_data/"
+            lst_data_str = pathstring + "LST-1/"
             bckgmu_final = np.loadtxt("{0}background.txt".format(lst_data_str))
 
             migmatval = np.loadtxt("{0}migmatval.txt".format(lst_data_str)) #m^2 * s #values
@@ -250,7 +241,7 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
         
         
         elif Telescope == "CTAN_alpha":
-            lst_data_str = "/nfs/pic.es/user/r/rgrauhar/rgrau/EBL-splines/CTA-N_migmat_data/"
+            lst_data_str = pathstring + "CTAO-N/"
             if migmat_time == 0.5*60*60:
                 
                 bckgmu_final = np.loadtxt("{0}background_0.5h.txt".format(lst_data_str))
@@ -297,7 +288,6 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
         maxbin = Usedbins[0][-1] + 1
         Eest_final = Eest[minbin:maxbin]
         
-        #tau_sim = tau_interp(Etrue, Source_z, EBL_Model_sim, kind_of_interp = "log") #old, before adding ebltable package #interpolate the tau values to have the same bins as the migration matrix and the data.
         tau1 =  OptDepth.readmodel(model=EBL_Model_sim)
         tau_sim = tau1.opt_depth(Source_z, Etrue) #interpolate the tau values to have the same bins as the migration matrix and the data.
 
@@ -322,9 +312,9 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
 
 
         if Eshift:
-            mu_vec_final = dNdE_to_mu_MAGIC_Eshift(dNdEa, Ebinsw_Etrue, migmatval, Eest, migmatshift, randomseed, Etrue) #get the dNdE to the needed mu values for the likelihood.
+            mu_vec_final = dNdE_to_mu_Eshift(dNdEa, Ebinsw_Etrue, migmatval, Eest, migmatshift, randomseed, Etrue) #get the dNdE to the needed mu values for the likelihood.
         else:
-            mu_vec_final = dNdE_to_mu_MAGIC(dNdEa, Ebinsw_Etrue, migmatval, Eest) #get the dNdE to the needed mu values for the likelihood.
+            mu_vec_final = dNdE_to_mu(dNdEa, Ebinsw_Etrue, migmatval, Eest) #get the dNdE to the needed mu values for the likelihood.
 
     else:
         raise Exception('The telescope "{tel}" has not been implemented.'.format(tel = Telescope))
@@ -337,7 +327,6 @@ for Spectrum_func_name in Spectrum_fn: #loop over the different intrinsic spectr
     for fit_func_name in fit_n: #loop over the different fit functions
         print("Starting function {func} for iter {iter}".format(func = fit_func_name, iter = iter))
         EBL_Model_fit, initial_guess_0, step, true_alpha_max, true_alpha_min, knots, Efirst, DeltaE, Source_z = config_fit(fit_func_name)
-        #tau_fit = tau_interp(Etrue, Source_z, EBL_Model_fit, kind_of_interp = "log")
         tau2 =  OptDepth.readmodel(model=EBL_Model_fit)
         tau_fit = tau2.opt_depth(Source_z, Etrue)
         if concave_EBL:
