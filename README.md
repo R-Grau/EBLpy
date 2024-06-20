@@ -17,7 +17,7 @@ Finally, scanEBL does the profile likelihood with real data from MAGIC or LST-1.
 
 ## LST-1 and CTAO-N
 ### Requirements:
--DL3 file with real data to get the background and IRF (LST-1) or CTAO-N IRFs from [https://www.ctao.org/for-scient](https://www.ctao.org/for-scientists/performance/ (CTAO-N)
+-DL3 file with real data to get the background and IRF (LST-1) or CTAO-N IRFs from (https://www.ctao.org/for-scientists/performance/ (CTAO-N)
 -gammapy installed
 ### Instructions:
 1-Use the file in LST-1 or CTAO-N folder to get the IRFs
