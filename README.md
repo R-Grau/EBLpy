@@ -46,7 +46,7 @@ Finally, scanEBL does the profile likelihood with real data from MAGIC or LST-1.
 Same as for the simulation, depending on the telescope
 ### Instructions:
 
-1-Same as 1 for the simulations
+1-Use the file in LST-1 or MAGIC folder to get the IRFs
 
 2-Change the second cell parameters to match your needs (Telescope, redshift of the source, Telescope used,...)
 
