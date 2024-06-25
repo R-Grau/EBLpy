@@ -15,7 +15,7 @@ Finally, scanEBL does the profile likelihood with real data from MAGIC or LST-1.
 
 ### Instructions:
 
-1-Use the file in the MAGIC folder to generate the IRF
+1-Update the path inside the files in the MAGIC folder to where you have the Output_flute.root. Use the file in the MAGIC folder to generate the IRF. 
 
 2-Generate the config files with EBL_MC_config_creator.ipynb (you need one general config file and one file for each simulated spectra function and fit function)
 
@@ -32,7 +32,7 @@ Finally, scanEBL does the profile likelihood with real data from MAGIC or LST-1.
 
 ### Instructions:
 
-1-Use the file in LST-1 or CTAO-N folder to get the IRFs
+1-Update the path inside the files in the LST-1 or CTAO-N folder to where you have the dl3 files or the CTA IRF files. Use the file in LST-1 or CTAO-N folder to get the IRFs
 
 2-Generate the config files with EBL_MC_config_creator.ipynb (you need one general config file and one file for each simulated spectra function and fit function)
 
@@ -46,7 +46,7 @@ Finally, scanEBL does the profile likelihood with real data from MAGIC or LST-1.
 Same as for the simulation, depending on the telescope
 ### Instructions:
 
-1-Use the file in LST-1 or MAGIC folder to get the IRFs
+1-Update the path inside the files in the MAGIC or LST-1 folder to where you have the Output_flute.root or the LST-1 dl3 files. Use the file in LST-1 or MAGIC folder to get the IRFs and the one in MAGIC to get the excess of the data.
 
 2-Change the second cell parameters to match your needs (Telescope, redshift of the source, Telescope used,...)
 
