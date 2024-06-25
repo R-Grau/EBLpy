@@ -3,7 +3,7 @@ void MAGIC_IRF()
   //To run this code you need to use root with MARS software.
 
   TString source = "BLLac_2020"; //source name
-  TString infilename = "/home/rgrau/Desktop/EBL_analysis_Feb2018/BLLac2020/Output_flute_150_EPWL.root"; //path of the Output_flute.root file
+  TString infilename = "data/Output_flute.root"; //path of the Output_flute.root file
   TFile* infile = new TFile(infilename);
 
   TH1D* hbckg = new TH1D();
@@ -59,6 +59,20 @@ void MAGIC_IRF()
   migmatrix->Write();
   outfile->Close();
   cout << "finished " << source << endl;
+
+  MHExcessEnergyTheta* theta = new MHExcessEnergyTheta();
+  theta->Read("MHExcessEnergyTheta");
+  TH1D* prhi = new TH1D();
+  prhi = theta->GetHist()->ProjectionX();
+
+  TString outfilename = "excess_" + source + ".root";
+  TFile* outfile = new TFile(outfilename, "recreate");
+  prhi->Write();
+  outfile->Close();
+
+
+
+
   // }
   return;
 }
